@@ -67,9 +67,21 @@ export class ApiError extends Error {
  * else falls through to the generic line rather than being guessed at: a wrong
  * explanation is worse than an honest "try again".
  */
-function spanishFor(status: number): string {
+function spanishFor(status: number, detail?: string): string {
+  // 409 and 404 from the scheduling routes carry their own Spanish, written for
+  // a receptionist and more specific than anything generic here: "ese horario
+  // ya está ocupado", "la reserva ya venció". Discarding it to say "no se pudo
+  // obtener la información" was a real defect -- it turned an actionable answer
+  // into a shrug. Only a detail that reads as Spanish is used, so an English
+  // framework message cannot reach the screen this way.
+  if ((status === 409 || status === 404) && detail && looksSpanish(detail)) {
+    return detail;
+  }
   if (status === 404) {
     return "Esta información no está disponible en este momento.";
+  }
+  if (status === 409) {
+    return "Ese horario ya no está disponible. Elija otro.";
   }
   if (status === 422) {
     return "La consulta no es válida. Avise al equipo técnico.";
@@ -81,6 +93,17 @@ function spanishFor(status: number): string {
 }
 
 /**
+ * Whether a message from the API is Spanish prose fit to show a user.
+ *
+ * FastAPI's own 404s and validation errors are English ("Not Found"), and the
+ * generic 500 handler answers with an English sentence too. Those must not
+ * reach a clinic's screen, so a detail has to look Spanish before it is shown.
+ */
+function looksSpanish(text: string): boolean {
+  return /[áéíóúñ¿¡]/i.test(text) || /(el|la|los|las|ya|no|está|cita|horario|elija)/i.test(text);
+}
+
+/**
  * One GET against the API, as JSON.
  *
  * `clinicId` is separate from `params` because every scoped route requires it
@@ -88,9 +111,19 @@ function spanishFor(status: number): string {
  * remembering. Row-level security would return nothing, which looks like an
  * empty clinic rather than a bug.
  */
-async function get<T>(
+async function request<T>(
   path: string,
-  { clinicId, params }: { clinicId?: string; params?: Record<string, string | number | undefined> } = {},
+  {
+    method = "GET",
+    clinicId,
+    params,
+    body,
+  }: {
+    method?: "GET" | "POST";
+    clinicId?: string;
+    params?: Record<string, string | number | undefined>;
+    body?: unknown;
+  } = {},
 ): Promise<T> {
   const url = new URL(path, API_BASE);
   if (clinicId) url.searchParams.set("clinic_id", clinicId);
@@ -101,11 +134,16 @@ async function get<T>(
   let response: Response;
   try {
     response = await fetch(url, {
-      // The review API is read-only and its data changes as imports run, so a
-      // cached response would show a receptionist a stale clinic.
+      method,
+      // The data changes as imports run and as staff book, so a cached
+      // response would show a receptionist a stale clinic.
       cache: "no-store",
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch (cause) {
     const timedOut = cause instanceof Error && cause.name === "TimeoutError";
@@ -113,8 +151,8 @@ async function get<T>(
       0,
       path,
       timedOut
-        ? `GET ${url} timed out after ${TIMEOUT_MS}ms.`
-        : `GET ${url} is unreachable. Is the backend running on ${API_BASE}?`,
+        ? `${method} ${url} timed out after ${TIMEOUT_MS}ms.`
+        : `${method} ${url} is unreachable. Is the backend running on ${API_BASE}?`,
       timedOut
         ? "El sistema tardó demasiado en responder. Intente de nuevo."
         : "No hay conexión con el sistema. Intente de nuevo en unos minutos.",
@@ -136,14 +174,38 @@ async function get<T>(
     throw new ApiError(
       response.status,
       path,
-      `GET ${url} answered ${response.status}: ${detail}`,
-      spanishFor(response.status),
+      `${method} ${url} answered ${response.status}: ${detail}`,
+      spanishFor(response.status, detail),
       requestId,
     );
   }
 
   return (await response.json()) as T;
 }
+
+/** A read. Every existing call site uses this. */
+const get = <T>(
+  path: string,
+  options: { clinicId?: string; params?: Record<string, string | number | undefined> } = {},
+): Promise<T> => request<T>(path, options);
+
+/**
+ * A write.
+ *
+ * Writes go through the same function as reads, so one place handles the
+ * timeout, the Spanish error wording and the request id. The status codes the
+ * scheduling routes use are meaningful and `ApiError.status` carries them: 409
+ * is "another patient took that time", not a server fault, and a caller is
+ * expected to tell the user so rather than retry.
+ */
+const post = <T>(
+  path: string,
+  options: {
+    clinicId?: string;
+    params?: Record<string, string | number | undefined>;
+    body?: unknown;
+  } = {},
+): Promise<T> => request<T>(path, { ...options, method: "POST" });
 
 // ---------------------------------------------------------------- the shapes
 // Mirrors of the API's response models. Written from the live responses rather
@@ -240,3 +302,127 @@ export const listAppointments = (
   clinicId: string,
   params?: { limit?: number; offset?: number; status?: string },
 ) => get<Page<Appointment>>("/review/appointments", { clinicId, params });
+
+// ------------------------------------------------- reference data for booking
+
+/** A clinic site. Returned as a bare array, not a page envelope. */
+export interface Location {
+  id: string;
+  clinic_id: string;
+  name: string;
+  address: string | null;
+}
+
+/**
+ * A kind of appointment, carrying how long it takes.
+ *
+ * `duration_minutes` is what the booking form sends rather than an end time:
+ * the length of a consultation is the clinic's decision, not the receptionist's.
+ */
+export interface AppointmentType {
+  id: string;
+  clinic_id: string;
+  name: string;
+  duration_minutes: number;
+  buffer_minutes: number;
+  sensitivity: string;
+}
+
+export const listLocations = (clinicId: string) =>
+  get<Location[]>("/review/locations", { clinicId });
+
+export const listAppointmentTypes = (clinicId: string) =>
+  get<AppointmentType[]>("/review/appointment-types", { clinicId });
+
+// -------------------------------------------------------------- escalations
+
+/**
+ * One thing a human has to deal with.
+ *
+ * `detail_es` is the sentence written for a receptionist and is what the screen
+ * shows; `reason` is the code the queue is filtered by. `patient_name` is null
+ * when nobody knows who it is about, which is itself a reason to escalate.
+ */
+export interface Escalation {
+  id: string;
+  clinic_id: string;
+  reason: string;
+  status: "open" | "resolved";
+  detail_es: string;
+  context: Record<string, unknown>;
+  created_at: string;
+  resolved_at: string | null;
+  patient_id: string | null;
+  patient_name: string | null;
+  appointment_id: string | null;
+}
+
+export const listEscalations = (
+  clinicId: string,
+  params?: { status?: "open" | "resolved"; limit?: number; offset?: number },
+) => get<Page<Escalation>>("/review/escalations", { clinicId, params });
+
+export const resolveEscalation = (clinicId: string, escalationId: string) =>
+  post<Escalation>(`/review/escalations/${escalationId}/resolve`, { clinicId });
+
+// ----------------------------------------------------------------- the writes
+
+/**
+ * What a booking needs.
+ *
+ * `start` must carry a UTC offset — the API refuses a naive time, because a
+ * time without one leaves the zone to be guessed. `duration_minutes` comes from
+ * the appointment type, so the caller does not compute an end.
+ *
+ * `idempotency_key` is the caller's own name for this intent. Sending it again
+ * returns the appointment the first call created rather than booking twice,
+ * which is what makes a double-submitted form safe.
+ */
+export interface BookRequest {
+  patient_id: string;
+  doctor_id: string;
+  location_id: string;
+  appointment_type_id: string;
+  start: string;
+  duration_minutes: number;
+  idempotency_key?: string;
+}
+
+export const bookAppointment = (clinicId: string, body: BookRequest) =>
+  post<Appointment>("/review/appointments", { clinicId, body });
+
+/** A booking held for a few minutes while the patient decides. */
+export const holdSlot = (
+  clinicId: string,
+  body: BookRequest & { minutes?: number },
+) => post<Appointment>("/review/appointments/holds", { clinicId, body });
+
+export const confirmHold = (clinicId: string, appointmentId: string) =>
+  post<Appointment>(`/review/appointments/${appointmentId}/confirm`, { clinicId });
+
+export const cancelAppointment = (
+  clinicId: string,
+  appointmentId: string,
+  reason?: string,
+) =>
+  post<Appointment>(`/review/appointments/${appointmentId}/cancel`, {
+    clinicId,
+    body: { reason: reason ?? null },
+  });
+
+/**
+ * Move an appointment. Answers with the **new** appointment, not the old one.
+ *
+ * The engine cancels the original and writes a replacement linked back to it,
+ * so the id changes. If the new time turns out to be taken, the original is
+ * left exactly as it was.
+ */
+export const rescheduleAppointment = (
+  clinicId: string,
+  appointmentId: string,
+  body: { start: string; duration_minutes: number; idempotency_key?: string },
+) =>
+  post<Appointment>(`/review/appointments/${appointmentId}/reschedule`, {
+    clinicId,
+    body,
+  });

@@ -30,6 +30,7 @@ const NAV = [
   { href: "/patients", label: "Pacientes" },
   { href: "/doctors", label: "Médicos" },
   { href: "/appointments", label: "Citas" },
+  { href: "/escalations", label: "Pendientes" },
 ] as const;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

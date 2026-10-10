@@ -139,3 +139,40 @@ test("an error carrying its own Spanish is used verbatim", () => {
   const error = new ApiError(500, "/x", "English for the log", "El sistema no pudo responder.");
   assert.equal(spanishOf(error), "El sistema no pudo responder.");
 });
+
+
+test("a 409 shows the API's own Spanish, not a generic shrug", async () => {
+  // The scheduling routes answer 409 with a sentence written for a
+  // receptionist: "Ese horario ya está ocupado. Elija otro." The first version
+  // of `spanishFor` had no 409 case, so that fell through to "No se pudo
+  // obtener la información" -- turning an actionable answer into a shrug.
+  // Caught end to end, in a browser, which is why this test exists.
+  const error = await failingCall(() =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({ detail: "Ese horario ya está ocupado. Elija otro." }),
+        { status: 409, headers: { "content-type": "application/json" } },
+      ),
+    ),
+  );
+
+  assert.equal(error.spanish, "Ese horario ya está ocupado. Elija otro.");
+  assertSpanish(error.spanish, "409");
+});
+
+test("an English detail never reaches the screen, whatever the status", async () => {
+  // FastAPI's own 404 is "Not Found", and the generic 500 handler answers in
+  // English too. Those must not be shown just because the status allows it.
+  for (const status of [404, 409]) {
+    const error = await failingCall(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ detail: "Not Found" }), {
+          status,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    assertSpanish(error.spanish, `status ${status} with an English detail`);
+    assert.ok(!error.spanish.includes("Not Found"));
+  }
+});
