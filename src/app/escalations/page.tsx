@@ -1,9 +1,14 @@
-import { listEscalations } from "@/lib/api";
+import { CheckCircle2, Clock, Inbox, UserX } from "lucide-react";
+import { cn } from "cn";
+
+import { ApiFailure, Empty, PageHeading } from "@/components/page";
+import { ConfirmAction } from "@/components/forms";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { resolve } from "@/lib/actions";
-import { load } from "@/lib/load";
-import { ApiFailure, Card, Empty, PageHeading } from "@/components/ui";
-import { ActionButton } from "@/components/forms";
+import { listEscalations } from "@/lib/api";
 import { intlLocale, translator, type CopyKey, type T } from "@/lib/i18n";
+import { load } from "@/lib/load";
 import { currentLocale } from "@/lib/locale";
 
 /**
@@ -17,9 +22,9 @@ export const dynamic = "force-dynamic";
 /**
  * Why the system handed this to a person.
  *
- * The reason code is translated; the sentence beside it (`detail_es`) is not,
- * because the API composes it with a date and a time and re-deriving it here
- * would mean two sources of the same wording. See `i18n.ts`.
+ * The reason code is translated; the sentence beside it is not, because the API
+ * composes it with a date and a time and re-deriving it here would mean two
+ * sources of the same wording. See `i18n.ts`.
  */
 const REASONS = [
   "no_acceptable_slot",
@@ -37,20 +42,9 @@ function reasonLabel(reason: string, t: T): string {
     : reason;
 }
 
-const whenFormatter = (locale: string) =>
-  new Intl.DateTimeFormat(locale, {
-  day: "2-digit",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: true,
-    timeZone: "America/Bogota",
-  });
-
 export default async function EscalationsPage() {
   const locale = await currentLocale();
   const t = translator(locale);
-  const WHEN = whenFormatter(intlLocale(locale));
   const result = await load("escalations", (clinic) =>
     listEscalations(clinic.id, { limit: 100 }),
   );
@@ -61,6 +55,15 @@ export default async function EscalationsPage() {
   const page = result.data;
   const open = page.items.filter((e) => e.status === "open");
   const done = page.items.filter((e) => e.status === "resolved");
+
+  const when = new Intl.DateTimeFormat(intlLocale(locale), {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "America/Bogota",
+  });
 
   return (
     <>
@@ -75,71 +78,91 @@ export default async function EscalationsPage() {
 
       {/* Said plainly, because it is the point of the queue: the system stops
           rather than guessing, and a person decides. */}
-      <Card className="mb-6 border-slate-200 bg-slate-50 px-5 py-3">
-        <p className="text-sm text-slate-700">
-          {t("pending.explainer")}
-        </p>
+      <Card className="bg-muted/40 mb-6">
+        <CardContent className="flex items-start gap-3 py-1">
+          <Inbox className="text-muted-foreground mt-0.5 size-4 shrink-0" />
+          <p className="text-muted-foreground text-sm">{t("pending.explainer")}</p>
+        </CardContent>
       </Card>
 
       {page.items.length === 0 ? (
-        <Card>
-          <Empty>{t("pending.empty")}</Empty>
+        <Card className="py-0">
+          <Empty icon={<CheckCircle2 className="size-5" />}>{t("pending.empty")}</Empty>
         </Card>
       ) : (
         <div className="space-y-3">
-          {[...open, ...done].map((item) => (
-            <Card
-              key={item.id}
-              className={`px-5 py-4 ${item.status === "open" ? "border-amber-200" : ""}`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={
-                        item.status === "open"
-                          ? "inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900"
-                          : "inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600"
-                      }
-                    >
-                      {item.status === "open" ? t("pending.open") : t("pending.resolved")}
-                    </span>
-                    <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                      {reasonLabel(item.reason, t)}
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      {WHEN.format(new Date(item.created_at))}
-                    </span>
+          {[...open, ...done].map((item) => {
+            const isOpen = item.status === "open";
+            return (
+              <Card
+                key={item.id}
+                className={cn(
+                  isOpen
+                    ? "border-amber-200 dark:border-amber-900/60"
+                    : "bg-muted/30 opacity-80",
+                )}
+              >
+                <CardContent className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "ring-1 ring-inset",
+                          isOpen ? "status-held" : "status-cancelled",
+                        )}
+                      >
+                        {isOpen ? t("pending.open") : t("pending.resolved")}
+                      </Badge>
+                      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                        {reasonLabel(item.reason, t)}
+                      </span>
+                      <span className="text-muted-foreground/70 flex items-center gap-1 text-xs">
+                        <Clock className="size-3" />
+                        {when.format(new Date(item.created_at))}
+                      </span>
+                    </div>
+
+                    {/* The sentence written for a receptionist, and the whole
+                        reason the row exists, so it is the largest thing here. */}
+                    <p className="mt-2.5 text-sm">{item.detail_es}</p>
+
+                    <p className="text-muted-foreground mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                      {item.patient_name ? (
+                        <>
+                          <span className="font-medium">{t("pending.patient")}:</span>
+                          {item.patient_name}
+                        </>
+                      ) : (
+                        <>
+                          <UserX className="size-3" />
+                          {t("pending.noPatient")}
+                        </>
+                      )}
+                      {item.resolved_at ? (
+                        <span className="before:mx-1 before:content-['·']">
+                          {t("pending.resolvedAt")} {when.format(new Date(item.resolved_at))}
+                        </span>
+                      ) : null}
+                    </p>
                   </div>
 
-                  {/* The sentence written for a receptionist. The whole reason
-                      the row exists, so it is the largest thing on the card. */}
-                  <p className="mt-2 text-sm text-slate-900">{item.detail_es}</p>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    {item.patient_name
-                      ? `${t("pending.patient")}: ${item.patient_name}`
-                      : t("pending.noPatient")}
-                    {item.resolved_at
-                      ? ` · ${t("pending.resolvedAt")} ${WHEN.format(new Date(item.resolved_at))}`
-                      : ""}
-                  </p>
-                </div>
-
-                {item.status === "open" ? (
-                  <div className="shrink-0">
-                    <ActionButton
+                  {isOpen ? (
+                    <ConfirmAction
                       action={resolve}
                       fields={{ escalation_id: item.id }}
                       label={t("action.resolve")}
                       pendingLabel={t("action.saving")}
-                      confirm={t("confirm.resolve")}
+                      title={t("resolve.title")}
+                      description={item.detail_es}
+                      confirmLabel={t("resolve.confirm")}
+                      cancelLabel={t("common.keep")}
                     />
-                  </div>
-                ) : null}
-              </div>
-            </Card>
-          ))}
+                  ) : null}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </>

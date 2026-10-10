@@ -1,17 +1,21 @@
-import { listAppointmentTypes, listDoctors, listLocations, listPatients } from "@/lib/api";
-import { book } from "@/lib/actions";
-import { load } from "@/lib/load";
-import { ApiFailure, Card, Empty, PageHeading } from "@/components/ui";
+import Link from "next/link";
+import { ArrowLeft, Clock } from "lucide-react";
+
+import { ApiFailure, Empty, PageHeading } from "@/components/page";
 import { BookingForm } from "@/components/forms";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  listAppointmentTypes,
+  listDoctors,
+  listLocations,
+  listPatients,
+} from "@/lib/api";
+import { book } from "@/lib/actions";
 import { translator } from "@/lib/i18n";
+import { load } from "@/lib/load";
 import { currentLocale } from "@/lib/locale";
 
-/**
- * Rendered per request, never prerendered.
- *
- * The pickers list live patients and doctors, so a build-time snapshot would
- * offer whoever opens the page the records that existed when it was built.
- */
+/** Rendered per request: the pickers list live patients and doctors. */
 export const dynamic = "force-dynamic";
 
 /** Today in Bogotá, as the date input wants it. A clinic books from today. */
@@ -22,8 +26,9 @@ function todayInBogota(): string {
 export default async function NewAppointmentPage() {
   const locale = await currentLocale();
   const t = translator(locale);
+
   const result = await load("appointments/new", async (clinic) => {
-    // One round trip each, in parallel: they do not depend on each other.
+    // In parallel: none of them depends on another.
     const [patients, doctors, locations, types] = await Promise.all([
       listPatients(clinic.id, { limit: 200 }),
       listDoctors(clinic.id, { limit: 100 }),
@@ -48,54 +53,66 @@ export default async function NewAppointmentPage() {
           : null;
 
   return (
-    <>
-      <PageHeading
-        title={t("book.title")}
-        subtitle={t("book.subtitle")}
-      />
+    <div className="mx-auto max-w-3xl">
+      <Link
+        href="/appointments"
+        className="text-muted-foreground hover:text-foreground mb-4 inline-flex items-center gap-1.5 text-sm transition-colors"
+      >
+        <ArrowLeft className="size-3.5" />
+        {t("appointments.title")}
+      </Link>
 
-      <Card className="px-5 py-5">
-        {missing ? (
-          <Empty>{missing}</Empty>
-        ) : (
-          <BookingForm
-            action={book}
-            defaultDate={todayInBogota()}
-            labels={{
-              patient: t("book.patient"),
-              doctor: t("book.doctor"),
-              site: t("book.site"),
-              type: t("book.type"),
-              date: t("book.date"),
-              time: t("book.time"),
-              select: t("book.select"),
-              minutes: t("book.minutes"),
-              submit: t("action.book"),
-              submitting: t("action.booking"),
-            }}
-            patients={patients.items.map((p) => ({
-              id: p.id,
-              label: `${p.given_names} ${p.family_names}`,
-              hint: `${p.document_type} ${p.document_number_masked}`,
-            }))}
-            // Only doctors who still take appointments. An inactive doctor keeps
-            // their history, so they appear on the list page but not here.
-            doctors={doctors.items
-              .filter((d) => d.active)
-              .map((d) => ({ id: d.id, label: d.full_name, hint: d.specialty || undefined }))}
-            locations={locations.map((l) => ({ id: l.id, label: l.name }))}
-            types={types.map((type) => ({
-              id: type.id,
-              label: type.name,
-              durationMinutes: type.duration_minutes,
-            }))}
-          />
-        )}
+      <PageHeading title={t("book.title")} subtitle={t("book.subtitle")} />
+
+      <Card>
+        <CardContent>
+          {missing ? (
+            <Empty>{missing}</Empty>
+          ) : (
+            <BookingForm
+              action={book}
+              defaultDate={todayInBogota()}
+              labels={{
+                patient: t("book.patient"),
+                doctor: t("book.doctor"),
+                site: t("book.site"),
+                type: t("book.type"),
+                date: t("book.date"),
+                time: t("book.time"),
+                select: t("book.select"),
+                minutes: t("book.minutes"),
+                submit: t("action.book"),
+                submitting: t("action.booking"),
+              }}
+              patients={patients.items.map((p) => ({
+                id: p.id,
+                label: `${p.given_names} ${p.family_names}`,
+                hint: `${p.document_type} ${p.document_number_masked}`,
+              }))}
+              // Only doctors who still take appointments. An inactive doctor
+              // keeps their history, so they appear on the list but not here.
+              doctors={doctors.items
+                .filter((d) => d.active)
+                .map((d) => ({
+                  id: d.id,
+                  label: d.full_name,
+                  hint: d.specialty || undefined,
+                }))}
+              locations={locations.map((l) => ({ id: l.id, label: l.name }))}
+              types={types.map((type) => ({
+                id: type.id,
+                label: type.name,
+                durationMinutes: type.duration_minutes,
+              }))}
+            />
+          )}
+        </CardContent>
       </Card>
 
-      <p className="mt-4 text-sm text-slate-500">
+      <p className="text-muted-foreground mt-4 flex items-center gap-1.5 text-sm">
+        <Clock className="size-3.5" />
         {t("book.timezoneNote")}
       </p>
-    </>
+    </div>
   );
 }

@@ -24,7 +24,7 @@
  * Run with: npm run e2e
  */
 
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
 const API = "http://127.0.0.1:8000";
 
@@ -46,6 +46,32 @@ function freeSlot(): { date: string; time: string } {
   // Unique per process, so a re-run does not collide with the previous one.
   const month = String(((process.pid + slotCounter) % 9) + 1).padStart(2, "0");
   return { date: `2028-${month}-${String(day).padStart(2, "0")}`, time: `${hh}:${mm}` };
+}
+
+/**
+ * Pick the nth option from a shadcn/ui select.
+ *
+ * These are a button plus a listbox rather than a native `<select>`, so
+ * `selectOption` does not apply: the test opens it and clicks, which is also
+ * what a user does.
+ */
+async function choose(page: Page, label: string, index = 0): Promise<void> {
+  await page.getByLabel(label, { exact: true }).click();
+  await page.getByRole("option").nth(index).click();
+}
+
+/** Fill the booking form and submit it. Assert on the toast afterwards. */
+async function submitBooking(
+  page: Page,
+  slot: { date: string; time: string },
+  patientIndex = 0,
+): Promise<void> {
+  await page.goto("/appointments/new");
+  await choose(page, "Paciente", patientIndex);
+  await choose(page, "M\u00e9dico", 0);
+  await page.locator('input[name="date"]').fill(slot.date);
+  await page.locator('input[name="time"]').fill(slot.time);
+  await page.getByRole("button", { name: /Agendar/ }).click();
 }
 
 /** The clinic every request is scoped to. Taken from the API, never guessed. */
@@ -92,14 +118,7 @@ test.describe("booking", () => {
     await page.goto("/appointments/new");
     await expect(page.getByRole("heading", { name: "Nueva cita" })).toBeVisible();
 
-    // Pick the first real option in each list, rather than assuming an id.
-    await page.locator('select[name="patient_id"]').selectOption({ index: 1 });
-    await page.locator('select[name="doctor_id"]').selectOption({ index: 1 });
-    const slot = freeSlot();
-    await page.locator('input[name="date"]').fill(slot.date);
-    await page.locator('input[name="time"]').fill(slot.time);
-
-    await page.getByRole("button", { name: /Agendar/ }).click();
+    await submitBooking(page, freeSlot());
 
     await expect(page.getByText(/Cita agendada para/)).toBeVisible({ timeout: 20000 });
 
@@ -126,12 +145,7 @@ test.describe("booking", () => {
     const slot = freeSlot();
 
     const submit = async () => {
-      await page.goto("/appointments/new");
-      await page.locator('select[name="patient_id"]').selectOption({ index: 1 });
-      await page.locator('select[name="doctor_id"]').selectOption({ index: 1 });
-      await page.locator('input[name="date"]').fill(slot.date);
-      await page.locator('input[name="time"]').fill(slot.time);
-      await page.getByRole("button", { name: /Agendar/ }).click();
+      await submitBooking(page, slot);
       await expect(page.getByText(/Cita agendada para/)).toBeVisible({ timeout: 20000 });
     };
 
@@ -154,34 +168,30 @@ test.describe("booking", () => {
   test("booking the same time twice is refused, in Spanish", async ({ page }) => {
     const slot = freeSlot();
 
-    const submit = async (patientIndex: number) => {
-      await page.goto("/appointments/new");
-      await page.locator('select[name="patient_id"]').selectOption({ index: patientIndex });
-      await page.locator('select[name="doctor_id"]').selectOption({ index: 1 });
-      await page.locator('input[name="date"]').fill(slot.date);
-      await page.locator('input[name="time"]').fill(slot.time);
-      await page.getByRole("button", { name: /Agendar/ }).click();
-    };
-
-    await submit(1);
+    await submitBooking(page, slot, 0);
     await expect(page.getByText(/Cita agendada para/)).toBeVisible({ timeout: 20000 });
 
     // A different patient, the same doctor and time: the database refuses it,
     // and the screen has to say so rather than show a server error.
-    await submit(2);
+    await submitBooking(page, slot, 1);
     await expect(page.getByText(/ocupado/)).toBeVisible({ timeout: 20000 });
   });
 
-  test("a time without a date is refused by the browser, not the server", async ({ page }) => {
+  test("the form cannot be submitted until every field is chosen", async ({ page }) => {
     await page.goto("/appointments/new");
-    await page.locator('select[name="patient_id"]').selectOption({ index: 1 });
-    await page.locator('select[name="doctor_id"]').selectOption({ index: 1 });
-    await page.locator('input[name="date"]').fill("");
 
-    await page.getByRole("button", { name: /Agendar/ }).click();
+    // Disabled with nothing selected: a receptionist cannot submit half a
+    // booking, so the API never sees one.
+    await expect(page.getByRole("button", { name: /Agendar/ })).toBeDisabled();
 
-    // `required` on the input means the form never submits, so nothing is
+    await choose(page, "Paciente", 0);
+    await choose(page, "M\u00e9dico", 0);
+    await expect(page.getByRole("button", { name: /Agendar/ })).toBeEnabled();
+
+    // Clearing the date leaves `required` to stop the submit, so nothing is
     // written and no round trip happens.
+    await page.locator('input[name="date"]').fill("");
+    await page.getByRole("button", { name: /Agendar/ }).click();
     await expect(page.getByText(/Cita agendada/)).toHaveCount(0);
   });
 });
@@ -203,8 +213,12 @@ test.describe("cancelling", () => {
       )
     ).json();
 
-    page.on("dialog", (d) => d.accept());
     await button.click();
+    // A dialog naming the patient and the time, rather than a browser
+    // `confirm` that could name neither.
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: /cancelar/i }).click();
     await expect(page.getByText(/Cita cancelada/).first()).toBeVisible({ timeout: 20000 });
 
     const after = await (
@@ -232,13 +246,16 @@ test.describe("the escalation queue", () => {
       (e: { status: string }) => e.status === "resolved",
     ).length;
 
-    page.on("dialog", (d) => d.accept());
     await page.goto("/escalations");
-    // 96 attendance flags share the same wording, so the text is not a
-    // selector. The first open card is, and the API said which row that is.
+    // Many attendance flags share the same wording, so the text is not a
+    // selector. The first open card is.
     const button = page.getByRole("button", { name: "Marcar resuelto" }).first();
     await expect(button).toBeVisible();
     await button.click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole("button", { name: /resuelto/i }).click();
 
     await expect(page.getByText(/marcado como resuelto/).first()).toBeVisible({
       timeout: 20000,
@@ -267,5 +284,102 @@ test.describe("failure handling", () => {
       { data: {} },
     );
     expect(response.status()).toBe(404);
+  });
+});
+
+test.describe("roles and masking", () => {
+  test("a receptionist sees masked identifiers and is told why", async ({ page }) => {
+    await page.goto("/patients");
+
+    await expect(page.getByText("Datos enmascarados")).toBeVisible();
+    // The masking itself, not only the notice about it.
+    await expect(page.locator("td.font-mono").first()).toContainText("*");
+    await expect(page.getByRole("link", { name: "Ingresar" })).toBeVisible();
+  });
+
+  test("signing in unmasks the identifiers and says the view is recorded", async ({
+    page,
+  }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Contraseña").fill("admin-local-only");
+    await page.getByRole("button", { name: "Ingresar" }).click();
+
+    await expect(page.getByText("Sesión de administrador iniciada.")).toBeVisible({
+      timeout: 20000,
+    });
+
+    await page.goto("/patients");
+    // Says the view is recorded, which somebody should know before they look.
+    await expect(page.getByText("Datos completos visibles")).toBeVisible();
+    await expect(page.getByText("Administrador")).toBeVisible();
+    // A real document number, not a row of asterisks.
+    await expect(page.locator("td.font-mono").first()).not.toContainText("*");
+  });
+
+  test("the wrong password is refused and nothing unmasks", async ({ page }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Contraseña").fill("no-es-la-contraseña");
+    await page.getByRole("button", { name: "Ingresar" }).click();
+
+    await expect(page.getByText("Contraseña incorrecta.")).toBeVisible({ timeout: 20000 });
+
+    await page.goto("/patients");
+    await expect(page.getByText("Datos enmascarados")).toBeVisible();
+  });
+
+  test("signing out masks the identifiers again", async ({ page }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Contraseña").fill("admin-local-only");
+    await page.getByRole("button", { name: "Ingresar" }).click();
+    await expect(page.getByText("Sesión de administrador iniciada.")).toBeVisible({
+      timeout: 20000,
+    });
+
+    await page.goto("/patients");
+    await page.getByRole("button", { name: "Salir" }).click();
+
+    await expect(page.getByText("Datos enmascarados")).toBeVisible({ timeout: 20000 });
+  });
+});
+
+test.describe("the interface itself", () => {
+  test("no browser dialog is ever used", async ({ page }) => {
+    // A native `confirm` would block until something accepted it, so a listener
+    // that fails the test is the way to prove none is reached. The dialog that
+    // does appear is a component, and this test clicks through it.
+    page.on("dialog", () => {
+      throw new Error("a native browser dialog was opened");
+    });
+
+    await page.goto("/appointments");
+    await page.getByRole("button", { name: "Cancelar" }).first().click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    // Dismissed rather than confirmed: this test is about the dialog, not the
+    // cancellation, and it should not change the clinic's data.
+    await page.getByRole("button", { name: /No, volver/ }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
+  test("dark mode is remembered and applies on the server", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: /Modo oscuro/ }).click();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    // Reloaded rather than toggled back: the cookie has to survive, and the
+    // class has to be present in the server's own output rather than added by
+    // a script after paint.
+    await page.reload();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    await page.getByRole("button", { name: /Modo claro/ }).click();
+    await expect(page.locator("html")).not.toHaveClass(/dark/);
+  });
+
+  test("the sidebar collapses to a sheet on a narrow viewport", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Menú" }).click();
+    await expect(page.getByRole("dialog").getByRole("link", { name: "Citas" })).toBeVisible();
   });
 });

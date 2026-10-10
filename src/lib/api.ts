@@ -131,6 +131,27 @@ async function request<T>(
     if (value !== undefined) url.searchParams.set(key, String(value));
   }
 
+  // The browser's cookies have to be forwarded explicitly: as far as the API
+  // is concerned this process is the client, so nothing travels unless it is
+  // passed. Without this, an administrator's session never reaches the API and
+  // every read comes back masked -- which is safe, and wrong.
+  //
+  // Read inside the request rather than taken as a parameter, so no call site
+  // can forget it. A failure to read them is not a reason to fail the request:
+  // no cookie means `staff`, which every screen renders correctly.
+  // Imported here rather than at the top of the file: `next/headers` only
+  // resolves inside the Next runtime, and a top-level import makes this module
+  // unloadable by the plain Node test runner that covers the error paths.
+  let cookie: string | undefined;
+  try {
+    const { headers } = await import("next/headers");
+    cookie = (await headers()).get("cookie") ?? undefined;
+  } catch {
+    // Outside a request, or no cookies: `staff`, which every screen renders
+    // correctly. Never a reason to fail the call.
+    cookie = undefined;
+  }
+
   let response: Response;
   try {
     response = await fetch(url, {
@@ -142,6 +163,7 @@ async function request<T>(
       headers: {
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        ...(cookie === undefined ? {} : { Cookie: cookie }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -255,6 +277,15 @@ export interface Patient {
   phone_masked: string | null;
   email_masked: string | null;
   created_at: string;
+  /**
+   * False when the three `_masked` fields above carry real values.
+   *
+   * The API keeps the field names for compatibility and says which it sent
+   * with this flag, so a screen never has to guess from whether a value
+   * contains an asterisk. Masked is the default, so an older API that omits
+   * the flag is treated as masked rather than as unmasked.
+   */
+  identifiers_masked?: boolean;
 }
 
 export interface Doctor {
@@ -426,3 +457,63 @@ export const rescheduleAppointment = (
     clinicId,
     body,
   });
+
+
+// -------------------------------------------------------------- the session
+
+/** What role a browser has on the review surface. */
+export type Role = "staff" | "admin";
+
+export interface SessionInfo {
+  role: Role;
+  expires_in_seconds: number;
+}
+
+/**
+ * Ask the API what role this browser's cookie proves.
+ *
+ * The cookie has to be forwarded explicitly: this process is the client as far
+ * as the API is concerned, so nothing travels unless it is passed. Sent as a
+ * raw `Cookie` header rather than by name, so a renamed cookie is the API's
+ * business rather than something this file has to learn.
+ */
+export async function readSession(cookieHeader: string | undefined): Promise<SessionInfo> {
+  if (!cookieHeader) return { role: "staff", expires_in_seconds: 0 };
+  try {
+    const response = await fetch(new URL("/review/session", API_BASE), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { Accept: "application/json", Cookie: cookieHeader },
+    });
+    if (!response.ok) return { role: "staff", expires_in_seconds: 0 };
+    return (await response.json()) as SessionInfo;
+  } catch {
+    // An unreachable API is not a reason to claim a role. Masked is the floor,
+    // and every screen renders correctly under it.
+    return { role: "staff", expires_in_seconds: 0 };
+  }
+}
+
+/**
+ * Sign in. Returns the API's `Set-Cookie` so the action can pass it on.
+ *
+ * The raw header is returned rather than parsed: the API decides the cookie's
+ * name, lifetime and flags, and re-deriving them here would mean two places
+ * disagreeing about a security boundary the first time one changes.
+ */
+export async function signInUpstream(
+  password: string,
+): Promise<{ ok: boolean; status: number; setCookie: string | null }> {
+  const response = await fetch(new URL("/review/session", API_BASE), {
+    method: "POST",
+    cache: "no-store",
+    signal: AbortSignal.timeout(TIMEOUT_MS),
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  return {
+    ok: response.ok,
+    status: response.status,
+    setCookie: response.headers.get("set-cookie"),
+  };
+}

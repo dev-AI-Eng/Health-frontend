@@ -176,12 +176,41 @@ const COPY = {
     "No patients. Import a file to begin.",
   ],
 
+  "reschedule.title": ["Reprogramar la cita", "Reschedule the appointment"],
+  "reschedule.description": [
+    "Se cancela la cita actual y se crea una nueva. Si el horario está ocupado, la cita original no cambia.",
+    "The current appointment is cancelled and a new one created. If the slot is taken, the original is left alone.",
+  ],
+  "cancel.title": ["¿Cancelar la cita?", "Cancel the appointment?"],
+  "cancel.description": [
+    "El horario quedará libre para otro paciente. La cita se conserva en el historial.",
+    "The slot will be freed for another patient. The appointment stays in the history.",
+  ],
+  "cancel.confirm": ["Sí, cancelar", "Yes, cancel"],
+  "common.keep": ["No, volver", "No, go back"],
+  "confirmHold.title": ["¿Confirmar la reserva?", "Confirm the held slot?"],
+  "confirmHold.description": [
+    "La reserva pasa a ser una cita agendada.",
+    "The held slot becomes a scheduled appointment.",
+  ],
+  "confirmHold.confirm": ["Sí, confirmar", "Yes, confirm"],
+  "resolve.title": ["¿Marcar como resuelto?", "Mark as resolved?"],
+  "resolve.description": [
+    "El pendiente sale de la lista de abiertos y queda el registro de quién lo resolvió.",
+    "The item leaves the open list and a record is kept of who resolved it.",
+  ],
+  "resolve.confirm": ["Sí, resuelto", "Yes, resolved"],
+
   // -------------------------------------------------------------- the queue
   "pending.title": ["Pendientes", "Pending"],
   "pending.none": ["Nada pendiente.", "Nothing pending."],
   "pending.empty": ["No hay pendientes.", "Nothing pending."],
   "pending.countOne": ["cosa por atender", "item to deal with"],
   "pending.countMany": ["cosas por atender", "items to deal with"],
+  "pending.explainerShort": [
+    "El sistema no las resuelve solo: una persona decide.",
+    "The system does not decide these on its own: a person does.",
+  ],
   "pending.explainer": [
     "Aquí llega todo lo que el sistema no debe resolver solo: una cita que no se pudo ofrecer, o una asistencia que nadie registró. Nada se borra de esta lista — se marca como resuelto y queda el registro.",
     "Everything the system must not decide on its own lands here: an appointment that could not be offered, or an attendance nobody recorded. Nothing is deleted from this list — it is marked resolved and the record stays.",
@@ -218,6 +247,41 @@ const COPY = {
   "reason.patient_asked_for_a_human": [
     "El paciente pidió hablar con alguien",
     "The patient asked for a person",
+  ],
+
+  // --------------------------------------------------- the shell and session
+  "shell.clinic": ["Clínica", "Clinic"],
+  "auth.signIn": ["Ingresar", "Sign in"],
+  "auth.signOut": ["Salir", "Sign out"],
+  "auth.admin": ["Administrador", "Administrator"],
+  "auth.staff": ["Recepción", "Reception"],
+  "auth.title": ["Ingresar como administrador", "Sign in as administrator"],
+  "auth.subtitle": [
+    "Un administrador ve los documentos, teléfonos y correos completos. Cada consulta queda registrada.",
+    "An administrator sees full documents, phones and emails. Every such view is recorded.",
+  ],
+  "auth.password": ["Contraseña", "Password"],
+  "auth.submit": ["Ingresar", "Sign in"],
+  "auth.submitting": ["Verificando…", "Checking…"],
+  "auth.signedIn": ["Sesión de administrador iniciada.", "Signed in as administrator."],
+  "auth.signedOut": ["Sesión cerrada.", "Signed out."],
+  "auth.wrongPassword": ["Contraseña incorrecta.", "Incorrect password."],
+  "auth.notConfigured": [
+    "No hay una contraseña de administrador configurada en este servidor.",
+    "No administrator password is configured on this server.",
+  ],
+  "auth.backToDashboard": ["Volver al panel", "Back to the dashboard"],
+
+  // ------------------------------------------------------- masked or not
+  "mask.masked": ["Datos enmascarados", "Data masked"],
+  "mask.maskedHint": [
+    "Los documentos, teléfonos y correos se muestran parcialmente. Ingrese como administrador para verlos completos.",
+    "Documents, phones and emails are partly hidden. Sign in as an administrator to see them in full.",
+  ],
+  "mask.unmasked": ["Datos completos visibles", "Full data visible"],
+  "mask.unmaskedHint": [
+    "Está viendo documentos, teléfonos y correos completos. Cada consulta queda registrada en la bitácora.",
+    "You are seeing full documents, phones and emails. Every view is recorded in the audit log.",
   ],
 
   // ------------------------------------------------------------ the failures

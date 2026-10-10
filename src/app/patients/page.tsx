@@ -1,73 +1,99 @@
-import { listPatients } from "@/lib/api";
-import { load } from "@/lib/load";
-import { ApiFailure, Card, Empty, PageHeading, Table, Td } from "@/components/ui";
-import { intlLocale, translator } from "@/lib/i18n";
-import { currentLocale } from "@/lib/locale";
+import { Users } from "lucide-react";
 
-/**
- * Rendered per request, never prerendered.
- *
- * The data is a live clinic: a build-time snapshot would show whoever opens
- * the page the patients that existed when it was built. Marking the route
- * dynamic is the correctness requirement here, not a performance trade.
- */
+import { ApiFailure, Empty, MaskNotice, PageHeading } from "@/components/page";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { listPatients } from "@/lib/api";
+import { intlLocale, translator } from "@/lib/i18n";
+import { load } from "@/lib/load";
+import { currentLocale } from "@/lib/locale";
+import { currentRole } from "@/lib/session";
+
+/** Rendered per request: a build-time snapshot would show a stale clinic. */
 export const dynamic = "force-dynamic";
 
-
-
 export default async function PatientsPage() {
-  const locale = await currentLocale();
+  const [locale, role] = await Promise.all([currentLocale(), currentRole()]);
   const t = translator(locale);
-  const head = [
-    t("patients.col.patient"),
-    t("patients.col.document"),
-    t("patients.col.age"),
-    t("patients.col.mobile"),
-    t("patients.col.email"),
-  ];
-  const result = await load("patients", (clinic) =>
-    listPatients(clinic.id, { limit: 50 }),
-  );
+  const result = await load("patients", (clinic) => listPatients(clinic.id, { limit: 50 }));
+
   if (!result.ok) {
     return <ApiFailure detail={result.spanish} requestId={result.requestId} locale={locale} />;
   }
   const page = result.data;
+  const nf = new Intl.NumberFormat(intlLocale(locale));
+  // The API's own flag decides, so the notice can never disagree with the data
+  // beside it. The role is the fallback for an empty page, which has no row to
+  // read the flag from but should still say what this viewer would see.
+  const masked = page.items[0]?.identifiers_masked ?? role !== "admin";
 
   return (
     <>
       <PageHeading
         title={t("patients.title")}
-        subtitle={`${page.total.toLocaleString(intlLocale(locale))} ${t("appointments.total")} · ${t("appointments.showing")} ${page.items.length}`}
+        subtitle={`${nf.format(page.total)} ${t("appointments.total")} · ${t("appointments.showing")} ${page.items.length}`}
       />
 
-      <Card>
+      <MaskNotice masked={masked} locale={locale} />
+
+      <Card className="overflow-hidden py-0">
         {page.items.length === 0 ? (
-          <Empty>{t("patients.empty")}</Empty>
+          <Empty icon={<Users className="size-5" />}>{t("patients.empty")}</Empty>
         ) : (
-          <Table head={head}>
-            {page.items.map((patient) => (
-              <tr key={patient.id} className="hover:bg-slate-50">
-                <Td className="font-medium">
-                  {patient.given_names} {patient.family_names}
-                  {/* A minor's appointments are arranged with a guardian, so
-                      it changes who the clinic contacts. Worth showing. */}
-                  {patient.is_minor ? (
-                    <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
-                      {t("patients.minor")}
-                    </span>
-                  ) : null}
-                </Td>
-                {/* Identifiers arrive masked from the API and there is no route
-                    that unmasks them: they are encrypted at rest. */}
-                <Td className="font-mono text-xs text-slate-600">
-                  {patient.document_type} {patient.document_number_masked}
-                </Td>
-                <Td className="tabular-nums text-slate-600">{patient.age ?? "—"}</Td>
-                <Td className="font-mono text-xs text-slate-600">{patient.phone_masked ?? "—"}</Td>
-                <Td className="text-slate-600">{patient.email_masked ?? "—"}</Td>
-              </tr>
-            ))}
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t("patients.col.patient")}</TableHead>
+                  <TableHead>{t("patients.col.document")}</TableHead>
+                  <TableHead className="text-right">{t("patients.col.age")}</TableHead>
+                  <TableHead>{t("patients.col.mobile")}</TableHead>
+                  <TableHead>{t("patients.col.email")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {page.items.map((patient) => (
+                  <TableRow key={patient.id}>
+                    <TableCell className="font-medium">
+                      <span className="flex items-center gap-2">
+                        {patient.given_names} {patient.family_names}
+                        {/* A minor's appointments are arranged with a guardian,
+                            so it changes who the clinic contacts. */}
+                        {patient.is_minor ? (
+                          <Badge variant="secondary" className="text-[11px]">
+                            {t("patients.minor")}
+                          </Badge>
+                        ) : null}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      <span className="text-foreground/70 mr-1.5 font-sans">
+                        {patient.document_type}
+                      </span>
+                      {patient.document_number_masked}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-right tabular-nums">
+                      {patient.age ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      {patient.phone_masked ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[14rem] truncate text-sm">
+                      {patient.email_masked ?? "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
     </>

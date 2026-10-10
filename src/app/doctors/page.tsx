@@ -1,68 +1,81 @@
+import { Stethoscope } from "lucide-react";
+import { cn } from "cn";
+
+import { ApiFailure, Empty, PageHeading } from "@/components/page";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { listDoctors } from "@/lib/api";
-import { load } from "@/lib/load";
-import { ApiFailure, Card, Empty, PageHeading, Table, Td } from "@/components/ui";
 import { intlLocale, translator } from "@/lib/i18n";
+import { load } from "@/lib/load";
 import { currentLocale } from "@/lib/locale";
 
-/**
- * Rendered per request, never prerendered.
- *
- * The data is a live clinic: a build-time snapshot would show whoever opens
- * the page the patients that existed when it was built. Marking the route
- * dynamic is the correctness requirement here, not a performance trade.
- */
+/** Rendered per request: a build-time snapshot would show a stale clinic. */
 export const dynamic = "force-dynamic";
-
-
 
 export default async function DoctorsPage() {
   const locale = await currentLocale();
   const t = translator(locale);
-  const head = [
-    t("doctors.col.doctor"),
-    t("doctors.col.specialty"),
-    t("doctors.col.status"),
-  ];
-  const result = await load("doctors", (clinic) =>
-    listDoctors(clinic.id, { limit: 100 }),
-  );
+  const result = await load("doctors", (clinic) => listDoctors(clinic.id, { limit: 100 }));
+
   if (!result.ok) {
     return <ApiFailure detail={result.spanish} requestId={result.requestId} locale={locale} />;
   }
   const page = result.data;
+  const nf = new Intl.NumberFormat(intlLocale(locale));
 
   return (
     <>
       <PageHeading
         title={t("doctors.title")}
-        subtitle={`${page.total.toLocaleString(intlLocale(locale))} ${t("appointments.total")}`}
+        subtitle={`${nf.format(page.total)} ${t("appointments.total")}`}
       />
 
-      <Card>
+      <Card className="overflow-hidden py-0">
         {page.items.length === 0 ? (
-          <Empty>{t("doctors.empty")}</Empty>
+          <Empty icon={<Stethoscope className="size-5" />}>{t("doctors.empty")}</Empty>
         ) : (
-          <Table head={head}>
-            {page.items.map((doctor) => (
-              <tr key={doctor.id} className="hover:bg-slate-50">
-                <Td className="font-medium">{doctor.full_name}</Td>
-                <Td className="text-slate-600">{doctor.specialty || "—"}</Td>
-                <Td>
-                  {/* An inactive doctor keeps their history but takes no new
-                      appointments, so the distinction matters on this screen. */}
-                  <span
-                    className={
-                      doctor.active
-                        ? "inline-flex rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800 ring-1 ring-inset ring-teal-200"
-                        : "inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500 ring-1 ring-inset ring-slate-200"
-                    }
-                  >
-                    {doctor.active ? t("doctors.active") : t("doctors.inactive")}
-                  </span>
-                </Td>
-              </tr>
-            ))}
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>{t("doctors.col.doctor")}</TableHead>
+                  <TableHead>{t("doctors.col.specialty")}</TableHead>
+                  <TableHead>{t("doctors.col.status")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {page.items.map((doctor) => (
+                  <TableRow key={doctor.id}>
+                    <TableCell className="font-medium">{doctor.full_name}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {doctor.specialty || "—"}
+                    </TableCell>
+                    <TableCell>
+                      {/* An inactive doctor keeps their history but takes no new
+                          appointments, so the distinction matters here. */}
+                      <Badge
+                        variant="secondary"
+                        className={cn(
+                          "ring-1 ring-inset",
+                          doctor.active ? "status-confirmed" : "status-cancelled",
+                        )}
+                      >
+                        {doctor.active ? t("doctors.active") : t("doctors.inactive")}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </Card>
     </>

@@ -1,26 +1,221 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/*
+ * The design system.
+ *
+ * A clinic's front desk is not a developer tool. The person using this is
+ * taking a phone call, has a queue in front of them, and needs to find one
+ * patient and move one appointment. So: generous type, calm surfaces, and
+ * colour reserved for meaning rather than decoration.
+ *
+ * TEAL AS THE PRIMARY
+ * -------------------
+ * Healthcare software defaults to medical blue, which reads as clinical and
+ * cold. Teal keeps the trust blue carries and adds warmth, and it leaves blue
+ * free to mean something: a scheduled appointment is blue, and that is
+ * information rather than branding.
+ *
+ * STATUS COLOUR IS A VOCABULARY
+ * -----------------------------
+ * Eight appointment statuses, each with a fixed hue that never changes screen
+ * to screen. Amber always means "waiting on somebody", rose always means "this
+ * did not happen". A receptionist learns the palette once.
+ *
+ * DARK MODE IS NOT AN AFTERTHOUGHT
+ * --------------------------------
+ * A reception desk is often under bad lighting and staff work evenings. Both
+ * themes are designed, not one inverted into the other.
+ */
+
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces. Three levels only: page, card, inset. More and nothing reads as
+     grouped. */
+  --background: oklch(0.985 0.002 247);
+  --foreground: oklch(0.21 0.015 252);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.015 252);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.015 252);
+
+  /* Teal, dark enough that white text on it passes contrast at small sizes. */
+  --primary: oklch(0.47 0.09 192);
+  --primary-foreground: oklch(0.99 0.005 190);
+
+  --secondary: oklch(0.967 0.004 247);
+  --secondary-foreground: oklch(0.28 0.02 252);
+  --muted: oklch(0.967 0.004 247);
+  --muted-foreground: oklch(0.52 0.015 252);
+  --accent: oklch(0.955 0.015 192);
+  --accent-foreground: oklch(0.33 0.055 192);
+
+  /* A warm rose rather than fire-engine red: cancelling an appointment is
+     routine clinic work, not an emergency. */
+  --destructive: oklch(0.58 0.19 18);
+  --destructive-foreground: oklch(0.99 0.005 20);
+
+  --border: oklch(0.925 0.005 250);
+  --input: oklch(0.925 0.005 250);
+  --ring: oklch(0.47 0.09 192);
+
+  /* 10px: softer than the 6px that reads as "admin panel", short of the 16px
+     that reads as a consumer app. */
+  --radius: 0.625rem;
+
+  /* Charts, for M4's reporting. Decided now so the palette is chosen once. */
+  --chart-1: oklch(0.47 0.09 192);
+  --chart-2: oklch(0.6 0.12 165);
+  --chart-3: oklch(0.65 0.14 85);
+  --chart-4: oklch(0.58 0.15 265);
+  --chart-5: oklch(0.6 0.16 25);
+
+  --sidebar: oklch(0.99 0.002 247);
+  --sidebar-foreground: oklch(0.21 0.015 252);
+  --sidebar-primary: oklch(0.47 0.09 192);
+  --sidebar-primary-foreground: oklch(0.99 0.005 190);
+  --sidebar-accent: oklch(0.955 0.015 192);
+  --sidebar-accent-foreground: oklch(0.33 0.055 192);
+  --sidebar-border: oklch(0.925 0.005 250);
+  --sidebar-ring: oklch(0.47 0.09 192);
+}
+
+.dark {
+  /* Not black. A true-black panel beside a white one is harsh under the
+     fluorescent light a reception desk usually has. */
+  --background: oklch(0.17 0.012 254);
+  --foreground: oklch(0.96 0.004 247);
+  --card: oklch(0.215 0.014 254);
+  --card-foreground: oklch(0.96 0.004 247);
+  --popover: oklch(0.215 0.014 254);
+  --popover-foreground: oklch(0.96 0.004 247);
+
+  /* Lifted, so teal still reads as teal rather than as grey-green. */
+  --primary: oklch(0.72 0.11 188);
+  --primary-foreground: oklch(0.18 0.03 195);
+
+  --secondary: oklch(0.27 0.016 254);
+  --secondary-foreground: oklch(0.96 0.004 247);
+  --muted: oklch(0.27 0.016 254);
+  --muted-foreground: oklch(0.69 0.012 250);
+  --accent: oklch(0.3 0.035 192);
+  --accent-foreground: oklch(0.9 0.06 188);
+
+  --destructive: oklch(0.65 0.17 20);
+  --destructive-foreground: oklch(0.15 0.02 20);
+
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.72 0.11 188);
+
+  --chart-1: oklch(0.72 0.11 188);
+  --chart-2: oklch(0.72 0.13 165);
+  --chart-3: oklch(0.78 0.14 85);
+  --chart-4: oklch(0.7 0.15 265);
+  --chart-5: oklch(0.7 0.16 25);
+
+  --sidebar: oklch(0.195 0.013 254);
+  --sidebar-foreground: oklch(0.96 0.004 247);
+  --sidebar-primary: oklch(0.72 0.11 188);
+  --sidebar-primary-foreground: oklch(0.18 0.03 195);
+  --sidebar-accent: oklch(0.3 0.035 192);
+  --sidebar-accent-foreground: oklch(0.9 0.06 188);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: oklch(0.72 0.11 188);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* Tabular figures everywhere: a column of counts and times whose width
+       shifts as digits change is hard to scan down. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A visible focus ring. Reception staff work by keyboard between phone
+     calls, and a ring somebody has to hunt for is a ring they lose. */
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-2;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/*
+ * Status colours as utilities rather than class strings repeated per component.
+ *
+ * Defined once so the eight statuses mean the same thing on the appointments
+ * table, the overview tiles, and anything M4's reporting adds.
+ */
+@utility status-held {
+  @apply bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900;
+}
+@utility status-scheduled {
+  @apply bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:ring-sky-900;
+}
+@utility status-confirmed {
+  @apply bg-teal-50 text-teal-800 ring-teal-200 dark:bg-teal-950/40 dark:text-teal-200 dark:ring-teal-900;
+}
+@utility status-checked-in {
+  @apply bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-200 dark:ring-indigo-900;
+}
+@utility status-completed {
+  @apply bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:ring-emerald-900;
+}
+@utility status-no-show {
+  @apply bg-rose-50 text-rose-800 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900;
+}
+@utility status-cancelled {
+  @apply bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:ring-slate-700;
+}
+@utility status-rescheduled {
+  @apply bg-violet-50 text-violet-800 ring-violet-200 dark:bg-violet-950/40 dark:text-violet-200 dark:ring-violet-900;
 }
