@@ -12,15 +12,16 @@
  * catching.
  *
  * Requires both services running:
- *     backend   RATE_LIMIT_PER_MINUTE=1000 python main.py   (port 8000)
- *     frontend  npx next build && npx next start            (port 3000)
+ *     backend   python main.py                      (port 8000)
+ *     frontend  npx next build && npx next start    (port 3000)
  *
- * The raised rate limit is for the suite, not for production. The API allows 60
- * requests a minute by default and a full run exceeds that -- every page render
- * makes several API calls. Hitting it answers "Too many requests", which is the
- * limiter working; it just makes the suite look broken.
+ * Nothing needs configuring. The API's rate limit follows its mode: strict for
+ * what faces the network, high enough in synthetic-data mode that neither the
+ * dashboard nor this suite is throttled. An earlier version of these notes told
+ * whoever ran them to set RATE_LIMIT_PER_MINUTE first, which was a workaround
+ * for a miscalibrated default rather than a requirement.
  *
- * Run with: npx playwright test
+ * Run with: npm run e2e
  */
 
 import { expect, test, type APIRequestContext } from "@playwright/test";

@@ -26,13 +26,11 @@ npm run lint
 
 `npm run e2e` drives a real browser against both services, because the write
 path cannot be tested any other way: a Server Action is invoked over React's
-own protocol, not as a plain form POST. Start the backend with a raised rate
-limit for the run — the API allows 60 requests a minute and a full suite
-exceeds that:
+own protocol, not as a plain form POST.
 
 ```bash
-RATE_LIMIT_PER_MINUTE=1000 python main.py   # in the backend repository
-npm run build && npm start                  # here
+python main.py               # in the backend repository
+npm run build && npm start   # here
 npm run e2e
 ```
 
