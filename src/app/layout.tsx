@@ -75,11 +75,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           // Labels resolved here, because a function cannot cross into a
           // client component -- React serialises data, not closures.
           nav={[
-            { href: "/", label: t("nav.overview"), icon: "overview" },
-            { href: "/appointments", label: t("nav.appointments"), icon: "appointments" },
-            { href: "/patients", label: t("nav.patients"), icon: "patients" },
-            { href: "/doctors", label: t("nav.doctors"), icon: "doctors" },
-            { href: "/escalations", label: t("nav.pending"), icon: "pending" },
+            { href: "/", label: t("nav.overview"), icon: "overview" as const },
+            {
+              href: "/appointments",
+              label: t("nav.appointments"),
+              icon: "appointments" as const,
+            },
+            { href: "/patients", label: t("nav.patients"), icon: "patients" as const },
+            { href: "/doctors", label: t("nav.doctors"), icon: "doctors" as const },
+            { href: "/escalations", label: t("nav.pending"), icon: "pending" as const },
+            { href: "/import", label: t("nav.import"), icon: "import" as const },
+            // The audit log names patients, so it is offered only to a role
+            // that can read it. The page refuses on its own account too: a
+            // hidden link is not a permission check.
+            ...(role === "admin"
+              ? [{ href: "/audit", label: t("nav.audit"), icon: "audit" as const }]
+              : []),
           ]}
           labels={{
             clinic: t("shell.clinic"),

@@ -19,10 +19,10 @@
 import "server-only";
 
 /** Where the Python API listens. Overridden per environment, never per request. */
-const API_BASE = process.env.API_BASE_URL ?? "http://127.0.0.1:8000";
+export const API_BASE = process.env.API_BASE_URL ?? "http://127.0.0.1:8000";
 
 /** How long to wait before giving up on the API, in milliseconds. */
-const TIMEOUT_MS = 10_000;
+export const TIMEOUT_MS = 10_000;
 
 /**
  * A call that did not come back with data.
@@ -67,7 +67,7 @@ export class ApiError extends Error {
  * else falls through to the generic line rather than being guessed at: a wrong
  * explanation is worse than an honest "try again".
  */
-function spanishFor(status: number, detail?: string): string {
+export function spanishFor(status: number, detail?: string): string {
   // 409 and 404 from the scheduling routes carry their own Spanish, written for
   // a receptionist and more specific than anything generic here: "ese horario
   // ya está ocupado", "la reserva ya venció". Discarding it to say "no se pudo
@@ -111,18 +111,21 @@ function looksSpanish(text: string): boolean {
  * remembering. Row-level security would return nothing, which looks like an
  * empty clinic rather than a bug.
  */
-async function request<T>(
+export async function request<T>(
   path: string,
   {
     method = "GET",
     clinicId,
     params,
     body,
+    timeoutMs = TIMEOUT_MS,
   }: {
-    method?: "GET" | "POST";
+    method?: "GET" | "POST" | "PUT";
     clinicId?: string;
     params?: Record<string, string | number | undefined>;
     body?: unknown;
+    /** Overrides `TIMEOUT_MS` for a call that is legitimately slower. */
+    timeoutMs?: number;
   } = {},
 ): Promise<T> {
   const url = new URL(path, API_BASE);
@@ -159,7 +162,7 @@ async function request<T>(
       // The data changes as imports run and as staff book, so a cached
       // response would show a receptionist a stale clinic.
       cache: "no-store",
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: {
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
@@ -173,7 +176,7 @@ async function request<T>(
       0,
       path,
       timedOut
-        ? `${method} ${url} timed out after ${TIMEOUT_MS}ms.`
+        ? `${method} ${url} timed out after ${timeoutMs}ms.`
         : `${method} ${url} is unreachable. Is the backend running on ${API_BASE}?`,
       timedOut
         ? "El sistema tardó demasiado en responder. Intente de nuevo."
@@ -206,9 +209,13 @@ async function request<T>(
 }
 
 /** A read. Every existing call site uses this. */
-const get = <T>(
+export const get = <T>(
   path: string,
-  options: { clinicId?: string; params?: Record<string, string | number | undefined> } = {},
+  options: {
+    clinicId?: string;
+    params?: Record<string, string | number | undefined>;
+    timeoutMs?: number;
+  } = {},
 ): Promise<T> => request<T>(path, options);
 
 /**
@@ -220,7 +227,7 @@ const get = <T>(
  * is "another patient took that time", not a server fault, and a caller is
  * expected to tell the user so rather than retry.
  */
-const post = <T>(
+export const post = <T>(
   path: string,
   options: {
     clinicId?: string;

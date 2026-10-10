@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   CalendarDays,
+  FileCheck2,
   Inbox,
   LayoutDashboard,
   Loader2,
@@ -24,6 +25,7 @@ import {
   Moon,
   Stethoscope,
   Sun,
+  Upload,
   Users,
 } from "lucide-react";
 import { cn } from "cn";
@@ -36,6 +38,16 @@ import { Separator } from "@/components/ui/separator";
 import type { Locale } from "@/lib/i18n";
 import { LOCALE_COOKIE } from "@/lib/i18n";
 
+const ICONS = {
+  overview: LayoutDashboard,
+  patients: Users,
+  doctors: Stethoscope,
+  appointments: CalendarDays,
+  pending: Inbox,
+  import: Upload,
+  audit: FileCheck2,
+} as const;
+
 /**
  * One sidebar destination, with its label already resolved.
  *
@@ -46,7 +58,7 @@ import { LOCALE_COOKIE } from "@/lib/i18n";
 export interface NavItem {
   href: string;
   label: string;
-  icon: "overview" | "patients" | "doctors" | "appointments" | "pending";
+  icon: keyof typeof ICONS;
 }
 
 /** The words the shell shows. Resolved on the server. */
@@ -56,14 +68,6 @@ export interface ShellLabels {
   signOut: string;
   admin: string;
 }
-
-const ICONS = {
-  overview: LayoutDashboard,
-  patients: Users,
-  doctors: Stethoscope,
-  appointments: CalendarDays,
-  pending: Inbox,
-} as const;
 
 function NavLinks({
   items,

@@ -1,8 +1,9 @@
+import Link from "next/link";
 import { Users } from "lucide-react";
 
 import { ApiFailure, Empty, MaskNotice, PageHeading } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -64,7 +65,14 @@ export default async function PatientsPage() {
                   <TableRow key={patient.id}>
                     <TableCell className="font-medium">
                       <span className="flex items-center gap-2">
-                        {patient.given_names} {patient.family_names}
+                        {/* The row links to everything attached to the patient:
+                            consents, phones and their appointments. */}
+                        <Link
+                          href={`/patients/${patient.id}`}
+                          className="hover:text-primary underline-offset-4 transition-colors hover:underline"
+                        >
+                          {patient.given_names} {patient.family_names}
+                        </Link>
                         {/* A minor's appointments are arranged with a guardian,
                             so it changes who the clinic contacts. */}
                         {patient.is_minor ? (
