@@ -1,6 +1,8 @@
 import { listPatients } from "@/lib/api";
 import { load } from "@/lib/load";
 import { ApiFailure, Card, Empty, PageHeading, Table, Td } from "@/components/ui";
+import { intlLocale, translator } from "@/lib/i18n";
+import { currentLocale } from "@/lib/locale";
 
 /**
  * Rendered per request, never prerendered.
@@ -11,29 +13,38 @@ import { ApiFailure, Card, Empty, PageHeading, Table, Td } from "@/components/ui
  */
 export const dynamic = "force-dynamic";
 
-const HEAD = ["Paciente", "Documento", "Edad", "Celular", "Correo"] as const;
+
 
 export default async function PatientsPage() {
+  const locale = await currentLocale();
+  const t = translator(locale);
+  const head = [
+    t("patients.col.patient"),
+    t("patients.col.document"),
+    t("patients.col.age"),
+    t("patients.col.mobile"),
+    t("patients.col.email"),
+  ];
   const result = await load("patients", (clinic) =>
     listPatients(clinic.id, { limit: 50 }),
   );
   if (!result.ok) {
-    return <ApiFailure detail={result.spanish} requestId={result.requestId} />;
+    return <ApiFailure detail={result.spanish} requestId={result.requestId} locale={locale} />;
   }
   const page = result.data;
 
   return (
     <>
       <PageHeading
-        title="Pacientes"
-        subtitle={`${page.total.toLocaleString("es-CO")} en total · mostrando ${page.items.length}`}
+        title={t("patients.title")}
+        subtitle={`${page.total.toLocaleString(intlLocale(locale))} ${t("appointments.total")} · ${t("appointments.showing")} ${page.items.length}`}
       />
 
       <Card>
         {page.items.length === 0 ? (
-          <Empty>Todavía no hay pacientes. Importe un archivo para empezar.</Empty>
+          <Empty>{t("patients.empty")}</Empty>
         ) : (
-          <Table head={HEAD}>
+          <Table head={head}>
             {page.items.map((patient) => (
               <tr key={patient.id} className="hover:bg-slate-50">
                 <Td className="font-medium">
@@ -42,7 +53,7 @@ export default async function PatientsPage() {
                       it changes who the clinic contacts. Worth showing. */}
                   {patient.is_minor ? (
                     <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
-                      menor
+                      {t("patients.minor")}
                     </span>
                   ) : null}
                 </Td>

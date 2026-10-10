@@ -5,6 +5,8 @@ import { cancel, confirm, reschedule } from "@/lib/actions";
 import { load } from "@/lib/load";
 import { ApiFailure, Card, Empty, PageHeading, StatusBadge, Table, Td } from "@/components/ui";
 import { ActionButton, WhenForm } from "@/components/forms";
+import { intlLocale, translator } from "@/lib/i18n";
+import { currentLocale } from "@/lib/locale";
 
 /**
  * Rendered per request, never prerendered.
@@ -15,7 +17,7 @@ import { ActionButton, WhenForm } from "@/components/forms";
  */
 export const dynamic = "force-dynamic";
 
-const HEAD = ["Cuándo", "Paciente", "Médico", "Sede", "Estado", "Acciones"] as const;
+
 
 /**
  * An appointment's time, as the clinic reads it.
@@ -24,15 +26,16 @@ const HEAD = ["Cuándo", "Paciente", "Médico", "Sede", "Estado", "Acciones"] as
  * unambiguous. It is formatted with that same zone rather than the viewer's,
  * because a receptionist means the time on the clinic wall.
  */
-const WHEN = new Intl.DateTimeFormat("es-CO", {
+const whenFormatter = (locale: string) =>
+  new Intl.DateTimeFormat(locale, {
   weekday: "short",
   day: "2-digit",
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
   hour12: true,
-  timeZone: "America/Bogota",
-});
+    timeZone: "America/Bogota",
+  });
 
 /**
  * Statuses a receptionist can still act on. A completed, cancelled, missed or
@@ -51,11 +54,22 @@ const TIME_PART = new Intl.DateTimeFormat("en-GB", {
 });
 
 export default async function AppointmentsPage() {
+  const locale = await currentLocale();
+  const t = translator(locale);
+  const WHEN = whenFormatter(intlLocale(locale));
+  const head = [
+    t("appointments.col.when"),
+    t("appointments.col.patient"),
+    t("appointments.col.doctor"),
+    t("appointments.col.site"),
+    t("appointments.col.status"),
+    t("appointments.col.actions"),
+  ];
   const result = await load("appointments", (clinic) =>
     listAppointments(clinic.id, { limit: 50 }),
   );
   if (!result.ok) {
-    return <ApiFailure detail={result.spanish} requestId={result.requestId} />;
+    return <ApiFailure detail={result.spanish} requestId={result.requestId} locale={locale} />;
   }
   const page = result.data;
 
@@ -63,22 +77,22 @@ export default async function AppointmentsPage() {
     <>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <PageHeading
-          title="Citas"
-          subtitle={`${page.total.toLocaleString("es-CO")} en total · mostrando ${page.items.length}`}
+          title={t("appointments.title")}
+          subtitle={`${page.total.toLocaleString(intlLocale(locale))} ${t("appointments.total")} · ${t("appointments.showing")} ${page.items.length}`}
         />
         <Link
           href="/appointments/new"
           className="rounded-md bg-teal-700 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-teal-800"
         >
-          Nueva cita
+          {t("appointments.new")}
         </Link>
       </div>
 
       <Card>
         {page.items.length === 0 ? (
-          <Empty>Todavía no hay citas agendadas.</Empty>
+          <Empty>{t("appointments.empty")}</Empty>
         ) : (
-          <Table head={HEAD}>
+          <Table head={head}>
             {page.items.map((appointment) => (
               <tr key={appointment.id} className="hover:bg-slate-50">
                 <Td className="whitespace-nowrap">
@@ -94,12 +108,12 @@ export default async function AppointmentsPage() {
                 </Td>
                 <Td className="text-slate-600">{appointment.location_name}</Td>
                 <Td>
-                  <StatusBadge status={appointment.status} />
+                  <StatusBadge status={appointment.status} locale={locale} />
                   {/* A hold is a live offer, so when it lapses decides whether
                       the slot is really taken. Nothing else carries an expiry. */}
                   {appointment.expires_at ? (
                     <div className="mt-1 text-xs text-amber-700">
-                      vence {WHEN.format(new Date(appointment.expires_at))}
+                      {t("appointments.expires")} {WHEN.format(new Date(appointment.expires_at))}
                     </div>
                   ) : null}
                 </Td>
@@ -111,28 +125,28 @@ export default async function AppointmentsPage() {
                           <ActionButton
                             action={confirm}
                             fields={{ appointment_id: appointment.id }}
-                            label="Confirmar"
-                            pendingLabel="Confirmando…"
+                            label={t("action.confirm")}
+                            pendingLabel={t("action.confirming")}
                           />
                         ) : null}
                         <ActionButton
                           action={cancel}
                           fields={{ appointment_id: appointment.id }}
-                          label="Cancelar"
-                          pendingLabel="Cancelando…"
-                          confirm={`¿Cancelar la cita de ${appointment.patient_name}? El horario quedará libre.`}
+                          label={t("action.cancel")}
+                          pendingLabel={t("action.cancelling")}
+                          confirm={t("confirm.cancelAppointment")}
                           tone="danger"
                         />
                       </div>
                       <details className="text-xs">
                         <summary className="cursor-pointer text-slate-500 hover:text-slate-800">
-                          Reprogramar
+                          {t("action.reschedule")}
                         </summary>
                         <WhenForm
                           action={reschedule}
                           hidden={{ appointment_id: appointment.id }}
-                          submitLabel="Mover"
-                          pendingLabel="Moviendo…"
+                          submitLabel={t("action.move")}
+                          pendingLabel={t("action.moving")}
                           defaultDate={DATE_PART.format(new Date(appointment.start))}
                           defaultTime={TIME_PART.format(new Date(appointment.start))}
                           durationMinutes={appointment.duration_minutes}

@@ -3,6 +3,8 @@ import { book } from "@/lib/actions";
 import { load } from "@/lib/load";
 import { ApiFailure, Card, Empty, PageHeading } from "@/components/ui";
 import { BookingForm } from "@/components/forms";
+import { translator } from "@/lib/i18n";
+import { currentLocale } from "@/lib/locale";
 
 /**
  * Rendered per request, never prerendered.
@@ -18,6 +20,8 @@ function todayInBogota(): string {
 }
 
 export default async function NewAppointmentPage() {
+  const locale = await currentLocale();
+  const t = translator(locale);
   const result = await load("appointments/new", async (clinic) => {
     // One round trip each, in parallel: they do not depend on each other.
     const [patients, doctors, locations, types] = await Promise.all([
@@ -30,24 +34,24 @@ export default async function NewAppointmentPage() {
   });
 
   if (!result.ok) {
-    return <ApiFailure detail={result.spanish} requestId={result.requestId} />;
+    return <ApiFailure detail={result.spanish} requestId={result.requestId} locale={locale} />;
   }
   const { patients, doctors, locations, types } = result.data;
 
   const missing =
     locations.length === 0
-      ? "No hay sedes registradas."
+      ? t("book.noSites")
       : types.length === 0
-        ? "No hay tipos de cita registrados."
+        ? t("book.noTypes")
         : patients.items.length === 0
-          ? "No hay pacientes. Importe un archivo para empezar."
+          ? t("book.noPatients")
           : null;
 
   return (
     <>
       <PageHeading
-        title="Nueva cita"
-        subtitle="El horario se reserva al guardar; si otro paciente lo toma primero, se le avisa."
+        title={t("book.title")}
+        subtitle={t("book.subtitle")}
       />
 
       <Card className="px-5 py-5">
@@ -57,6 +61,18 @@ export default async function NewAppointmentPage() {
           <BookingForm
             action={book}
             defaultDate={todayInBogota()}
+            labels={{
+              patient: t("book.patient"),
+              doctor: t("book.doctor"),
+              site: t("book.site"),
+              type: t("book.type"),
+              date: t("book.date"),
+              time: t("book.time"),
+              select: t("book.select"),
+              minutes: t("book.minutes"),
+              submit: t("action.book"),
+              submitting: t("action.booking"),
+            }}
             patients={patients.items.map((p) => ({
               id: p.id,
               label: `${p.given_names} ${p.family_names}`,
@@ -68,17 +84,17 @@ export default async function NewAppointmentPage() {
               .filter((d) => d.active)
               .map((d) => ({ id: d.id, label: d.full_name, hint: d.specialty || undefined }))}
             locations={locations.map((l) => ({ id: l.id, label: l.name }))}
-            types={types.map((t) => ({
-              id: t.id,
-              label: t.name,
-              durationMinutes: t.duration_minutes,
+            types={types.map((type) => ({
+              id: type.id,
+              label: type.name,
+              durationMinutes: type.duration_minutes,
             }))}
           />
         )}
       </Card>
 
       <p className="mt-4 text-sm text-slate-500">
-        Las citas se guardan en la zona horaria de Colombia (UTC−5).
+        {t("book.timezoneNote")}
       </p>
     </>
   );

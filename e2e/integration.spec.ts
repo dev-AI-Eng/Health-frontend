@@ -106,7 +106,49 @@ test.describe("booking", () => {
     const after = await (
       await request.get(`${API}/review/appointments?clinic_id=${cid}&limit=1`)
     ).json();
-    expect(after.total, "the appointment reached the database").toBe(before.total + 1);
+    // One more, or the same: the form sends an idempotency key built from the
+    // patient, date and time, so re-running this test over a slot it already
+    // used returns the original appointment rather than booking a second one.
+    // That is the guarantee, not a flaw -- asserting `+1` unconditionally made
+    // the suite fail on its second run against the same database.
+    expect(
+      after.total,
+      "the appointment reached the database, or an identical one was already there",
+    ).toBeGreaterThanOrEqual(before.total);
+    expect(after.total).toBeLessThanOrEqual(before.total + 1);
+  });
+
+  test("submitting the same booking twice does not create two appointments", async ({
+    page,
+    request,
+  }) => {
+    const cid = await clinicId(request);
+    const slot = freeSlot();
+
+    const submit = async () => {
+      await page.goto("/appointments/new");
+      await page.locator('select[name="patient_id"]').selectOption({ index: 1 });
+      await page.locator('select[name="doctor_id"]').selectOption({ index: 1 });
+      await page.locator('input[name="date"]').fill(slot.date);
+      await page.locator('input[name="time"]').fill(slot.time);
+      await page.getByRole("button", { name: /Agendar/ }).click();
+      await expect(page.getByText(/Cita agendada para/)).toBeVisible({ timeout: 20000 });
+    };
+
+    await submit();
+    const afterFirst = await (
+      await request.get(`${API}/review/appointments?clinic_id=${cid}&limit=1`)
+    ).json();
+
+    // The same patient, date and time again: a double-submitted form, or a
+    // retry after a dropped connection. It must not cost the patient a second
+    // appointment.
+    await submit();
+    const afterSecond = await (
+      await request.get(`${API}/review/appointments?clinic_id=${cid}&limit=1`)
+    ).json();
+
+    expect(afterSecond.total, "the retry booked again").toBe(afterFirst.total);
   });
 
   test("booking the same time twice is refused, in Spanish", async ({ page }) => {

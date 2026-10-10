@@ -7,6 +7,8 @@
  */
 import type { ReactNode } from "react";
 
+import { type Locale, translator } from "@/lib/i18n";
+
 export function PageHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-6">
@@ -40,17 +42,23 @@ export function Stat({ label, value }: { label: string; value: ReactNode }) {
  * it out over the phone is how a receptionist reports a problem.
  */
 export function ApiFailure({
-  title = "No se pudo cargar la información",
+  title,
   detail,
   requestId,
+  // Spanish by default: a failure reaching a clinic's screen must be readable
+  // there whether or not the page remembered to pass a locale.
+  locale = "es",
 }: {
   title?: string;
   detail: string;
   requestId?: string;
+  locale?: Locale;
 }) {
+  const t = translator(locale);
+  const heading = title ?? t("error.title");
   return (
     <Card className="border-rose-200 bg-rose-50 px-5 py-4">
-      <p className="font-medium text-rose-900">{title}</p>
+      <p className="font-medium text-rose-900">{heading}</p>
       <p className="mt-1 text-sm text-rose-800">{detail}</p>
       {requestId ? (
         <p className="mt-2 font-mono text-xs text-rose-700">request id: {requestId}</p>
@@ -90,16 +98,31 @@ export function Td({ children, className = "" }: { children: ReactNode; classNam
 }
 
 /** Appointment statuses, in the Spanish a receptionist reads. */
-const STATUS_ES: Record<string, string> = {
-  hold: "reservado",
-  scheduled: "agendada",
-  confirmed: "confirmada",
-  checked_in: "en sala",
-  completed: "atendida",
-  no_show: "no asistió",
-  cancelled: "cancelada",
-  rescheduled: "reprogramada",
-};
+/**
+ * The engine's status values, worded for a person.
+ *
+ * Looked up through the copy table so one switch changes every screen, and so
+ * an unknown status falls through to its raw value rather than rendering blank
+ * -- a status the engine added and this file has not learned yet should be
+ * visible, not hidden.
+ */
+const STATUS_KEYS = [
+  "hold",
+  "scheduled",
+  "confirmed",
+  "checked_in",
+  "completed",
+  "no_show",
+  "cancelled",
+  "rescheduled",
+] as const;
+
+function statusLabel(status: string, locale: Locale): string {
+  const t = translator(locale);
+  return (STATUS_KEYS as readonly string[]).includes(status)
+    ? t(`status.${status}` as Parameters<typeof t>[0])
+    : status;
+}
 
 /** Colour carries the same meaning the engine gives a status, not decoration. */
 const STATUS_TONE: Record<string, string> = {
@@ -113,13 +136,13 @@ const STATUS_TONE: Record<string, string> = {
   rescheduled: "bg-slate-100 text-slate-600 ring-slate-200",
 };
 
-export function StatusBadge({ status }: { status: string }) {
+export function StatusBadge({ status, locale }: { status: string; locale: Locale }) {
   const tone = STATUS_TONE[status] ?? "bg-slate-100 text-slate-700 ring-slate-200";
   return (
     <span
       className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${tone}`}
     >
-      {STATUS_ES[status] ?? status}
+      {statusLabel(status, locale)}
     </span>
   );
 }

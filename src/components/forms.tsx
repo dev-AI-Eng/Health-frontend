@@ -167,6 +167,26 @@ export function WhenForm({
   );
 }
 
+/**
+ * The words a form shows.
+ *
+ * Passed in rather than looked up here: this is a client component, and the
+ * copy table plus the cookie read belong on the server. It also keeps the
+ * component honest -- it cannot render a string the page did not give it.
+ */
+export interface BookingLabels {
+  patient: string;
+  doctor: string;
+  site: string;
+  type: string;
+  date: string;
+  time: string;
+  select: string;
+  minutes: string;
+  submit: string;
+  submitting: string;
+}
+
 /** One option in a picker. */
 export interface Choice {
   id: string;
@@ -188,6 +208,7 @@ export function BookingForm({
   locations,
   types,
   defaultDate,
+  labels,
 }: {
   action: Action;
   patients: Choice[];
@@ -195,13 +216,14 @@ export function BookingForm({
   locations: Choice[];
   types: (Choice & { durationMinutes: number })[];
   defaultDate: string;
+  labels: BookingLabels;
 }) {
   const [result, setResult] = useState<ActionResult | null>(null);
   const [pending, start] = useTransition();
   const [typeId, setTypeId] = useState(types[0]?.id ?? "");
 
   const duration =
-    types.find((t) => t.id === typeId)?.durationMinutes ?? types[0]?.durationMinutes ?? 20;
+    types.find((type) => type.id === typeId)?.durationMinutes ?? types[0]?.durationMinutes ?? 20;
 
   const field = "mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1.5 text-sm";
 
@@ -211,10 +233,10 @@ export function BookingForm({
       className="grid gap-4 sm:grid-cols-2"
     >
       <label className="text-sm">
-        <span className="font-medium text-slate-700">Paciente</span>
+        <span className="font-medium text-slate-700">{labels.patient}</span>
         <select name="patient_id" required className={field} defaultValue="">
           <option value="" disabled>
-            Seleccione…
+            {labels.select}
           </option>
           {patients.map((p) => (
             <option key={p.id} value={p.id}>
@@ -226,10 +248,10 @@ export function BookingForm({
       </label>
 
       <label className="text-sm">
-        <span className="font-medium text-slate-700">Médico</span>
+        <span className="font-medium text-slate-700">{labels.doctor}</span>
         <select name="doctor_id" required className={field} defaultValue="">
           <option value="" disabled>
-            Seleccione…
+            {labels.select}
           </option>
           {doctors.map((d) => (
             <option key={d.id} value={d.id}>
@@ -241,7 +263,7 @@ export function BookingForm({
       </label>
 
       <label className="text-sm">
-        <span className="font-medium text-slate-700">Sede</span>
+        <span className="font-medium text-slate-700">{labels.site}</span>
         <select name="location_id" required className={field} defaultValue={locations[0]?.id}>
           {locations.map((l) => (
             <option key={l.id} value={l.id}>
@@ -252,7 +274,7 @@ export function BookingForm({
       </label>
 
       <label className="text-sm">
-        <span className="font-medium text-slate-700">Tipo de cita</span>
+        <span className="font-medium text-slate-700">{labels.type}</span>
         <select
           name="appointment_type_id"
           required
@@ -260,21 +282,21 @@ export function BookingForm({
           value={typeId}
           onChange={(e) => setTypeId(e.target.value)}
         >
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.label} · {t.durationMinutes} min
+          {types.map((type) => (
+            <option key={type.id} value={type.id}>
+              {type.label} · {type.durationMinutes} {labels.minutes}
             </option>
           ))}
         </select>
       </label>
 
       <label className="text-sm">
-        <span className="font-medium text-slate-700">Fecha</span>
+        <span className="font-medium text-slate-700">{labels.date}</span>
         <input type="date" name="date" required defaultValue={defaultDate} className={field} />
       </label>
 
       <label className="text-sm">
-        <span className="font-medium text-slate-700">Hora</span>
+        <span className="font-medium text-slate-700">{labels.time}</span>
         <input type="time" name="time" required step={300} defaultValue="09:00" className={field} />
       </label>
 
@@ -288,7 +310,7 @@ export function BookingForm({
           disabled={pending}
           className="rounded-md bg-teal-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-teal-800 disabled:opacity-50"
         >
-          {pending ? "Agendando…" : `Agendar (${duration} min)`}
+          {pending ? labels.submitting : `${labels.submit} (${duration} ${labels.minutes})`}
         </button>
         <Outcome result={result} />
       </div>
