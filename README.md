@@ -17,10 +17,23 @@ npm run dev                    # http://localhost:3000
 ```
 
 ```bash
-npm test          # the failure path, with no server needed
+npm test          # the failure path, no server needed
+npm run e2e       # the whole thing in a browser, both services running
 npx tsc --noEmit  # types
 npm run build     # production build
 npm run lint
+```
+
+`npm run e2e` drives a real browser against both services, because the write
+path cannot be tested any other way: a Server Action is invoked over React's
+own protocol, not as a plain form POST. Start the backend with a raised rate
+limit for the run — the API allows 60 requests a minute and a full suite
+exceeds that:
+
+```bash
+RATE_LIMIT_PER_MINUTE=1000 python main.py   # in the backend repository
+npm run build && npm start                  # here
+npm run e2e
 ```
 
 ## How it talks to the API
@@ -33,6 +46,18 @@ That is not a style choice. The API sends no CORS headers and requires a
 loopback `Host`, both deliberate; reaching around either from the browser
 would weaken them. Fetching server-side also means a page renders only the
 fields it chose to show, which is what role-based access will need.
+
+## Writing, not just reading
+
+The browser never calls the Python API — it cannot, and that is deliberate: the
+API sends no CORS headers and requires a loopback `Host`. Every write goes
+through a Server Action in `src/lib/actions.ts`, which runs in this Node
+process.
+
+Actions return a result object rather than throwing, because the answer is
+usually what the user needs to see. A 409 from the scheduling routes means
+another patient took that time first — the request was fine, and the screen
+says so in Spanish rather than showing an error.
 
 ## Conventions
 
