@@ -22,6 +22,8 @@ import path from "node:path";
 
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
+import { requireAdminPassword, signInAsAdmin } from "./auth";
+
 const API = "http://127.0.0.1:8000";
 const CLEAN = path.join(__dirname, "1_clean_ips.xlsx");
 const MESSY = path.join(__dirname, "9_hoja_recepcion.xlsx");
@@ -182,12 +184,8 @@ test.describe("the audit log", () => {
   });
 
   test("an administrator sees the log and the chain verification", async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.getByLabel("Contraseña").fill("admin-local-only");
-    await page.getByRole("button", { name: "Ingresar" }).click();
-    await expect(page.getByText("Sesión de administrador iniciada.")).toBeVisible({
-      timeout: 20000,
-    });
+    requireAdminPassword();
+    await signInAsAdmin(page);
 
     await page.goto("/audit");
 
@@ -202,12 +200,8 @@ test.describe("the audit log", () => {
     await page.goto("/");
     await expect(page.getByRole("link", { name: "Bitácora" })).toHaveCount(0);
 
-    await page.goto("/sign-in");
-    await page.getByLabel("Contraseña").fill("admin-local-only");
-    await page.getByRole("button", { name: "Ingresar" }).click();
-    await expect(page.getByText("Sesión de administrador iniciada.")).toBeVisible({
-      timeout: 20000,
-    });
+    requireAdminPassword();
+    await signInAsAdmin(page);
 
     await page.goto("/");
     await expect(page.getByRole("link", { name: "Bitácora" })).toBeVisible();

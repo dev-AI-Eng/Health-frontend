@@ -34,6 +34,23 @@ npm run build && npm start   # here
 npm run e2e
 ```
 
+**`npm start` serves the build it started with.** Rebuild and it keeps serving
+the old one until restarted, which reports failures that are not real.
+
+Five of the browser tests sign in as an administrator, and the password comes
+from the environment rather than from the test files -- a literal there is the
+first thing a secret scan flags, and rule 6 of the backend's CLAUDE.md names a
+test fixture as a place a secret must never be written. Use the same value the
+API has in its own `.env`:
+
+```bash
+REVIEW_ADMIN_PASSWORD=... npm run e2e
+```
+
+Unset, those five skip rather than fail: a missing local credential is not a
+broken dashboard. The tests that assert the *masked* view still run, so an
+absent password cannot turn the masking guarantee green by accident.
+
 ## How it talks to the API
 
 Every request is made in the Node process, never from the browser. `src/lib/api.ts`

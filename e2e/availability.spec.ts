@@ -9,7 +9,9 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
+
+import { requireAdminPassword, signInAsAdmin } from "./auth";
 
 const API = "http://127.0.0.1:8000";
 const MESSY = path.join(__dirname, "9_hoja_recepcion.xlsx");
@@ -34,15 +36,6 @@ async function doctorWithRules(
     if (detail.availability_rules.length > 0) return doctor.id;
   }
   return null;
-}
-
-async function signIn(page: Page): Promise<void> {
-  await page.goto("/sign-in");
-  await page.getByLabel("Contraseña").fill("admin-local-only");
-  await page.getByRole("button", { name: "Ingresar" }).click();
-  await expect(page.getByText("Sesión de administrador iniciada.")).toBeVisible({
-    timeout: 20000,
-  });
 }
 
 test.describe("availability, made visible", () => {
@@ -126,7 +119,8 @@ test.describe("phones shared between patients", () => {
     ).json();
     test.skip(shared.length === 0, "no shared handsets in this data");
 
-    await signIn(page);
+    requireAdminPassword();
+    await signInAsAdmin(page);
     await page.goto("/handsets");
 
     await expect(page.getByText("Teléfonos compartidos").first()).toBeVisible();

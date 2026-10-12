@@ -26,6 +26,8 @@
 
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 
+import { requireAdminPassword, signInAsAdmin } from "./auth";
+
 const API = "http://127.0.0.1:8000";
 
 /**
@@ -300,13 +302,8 @@ test.describe("roles and masking", () => {
   test("signing in unmasks the identifiers and says the view is recorded", async ({
     page,
   }) => {
-    await page.goto("/sign-in");
-    await page.getByLabel("Contraseña").fill("admin-local-only");
-    await page.getByRole("button", { name: "Ingresar" }).click();
-
-    await expect(page.getByText("Sesión de administrador iniciada.")).toBeVisible({
-      timeout: 20000,
-    });
+    requireAdminPassword();
+    await signInAsAdmin(page);
 
     await page.goto("/patients");
     // Says the view is recorded, which somebody should know before they look.
@@ -328,12 +325,8 @@ test.describe("roles and masking", () => {
   });
 
   test("signing out masks the identifiers again", async ({ page }) => {
-    await page.goto("/sign-in");
-    await page.getByLabel("Contraseña").fill("admin-local-only");
-    await page.getByRole("button", { name: "Ingresar" }).click();
-    await expect(page.getByText("Sesión de administrador iniciada.")).toBeVisible({
-      timeout: 20000,
-    });
+    requireAdminPassword();
+    await signInAsAdmin(page);
 
     await page.goto("/patients");
     await page.getByRole("button", { name: "Salir" }).click();
