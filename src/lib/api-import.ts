@@ -22,6 +22,7 @@ import {
   request,
   spanishFor,
   type Appointment,
+  type Doctor,
   type Page,
   type Patient,
 } from "@/lib/api";
@@ -185,11 +186,18 @@ export const validateImport = (clinicId: string, sessionId: string) =>
 export const commitImport = (clinicId: string, sessionId: string) =>
   post<ImportCommit>(`/onboarding/uploads/${sessionId}/commit`, { clinicId });
 
+/**
+ * The staged rows, filtered by state.
+ *
+ * Answers a bare array rather than the `{items, total}` envelope every
+ * `/review` list uses. Typed as the array it actually is: assuming the
+ * envelope made the page read `.items` of undefined and 500.
+ */
 export const listImportRows = (
   clinicId: string,
   sessionId: string,
   params?: { sheet?: string; status?: string; limit?: number; offset?: number },
-) => get<Page<ImportRow>>(`/onboarding/uploads/${sessionId}/rows`, { clinicId, params });
+) => get<ImportRow[]>(`/onboarding/uploads/${sessionId}/rows`, { clinicId, params });
 
 export const listMappingProfiles = (clinicId: string) =>
   get<MappingProfile[]>("/onboarding/profiles", { clinicId });
@@ -421,3 +429,85 @@ export const correctRow = (
   sessionId: string,
   body: { sheet: string; row_number: number; cells: Record<string, string> },
 ) => post<ImportSession>(`/onboarding/uploads/${sessionId}/rows/correct`, { clinicId, body });
+
+// ============================== M2: availability, made visible
+
+/** One bookable slot, computed from rules rather than read from a table. */
+export interface Slot {
+  start: string;
+  end: string;
+  duration_minutes: number;
+}
+
+/**
+ * What a doctor can genuinely offer in a date range.
+ *
+ * Recomputed per request from their weekly rules, dated exceptions, Colombian
+ * public holidays and their existing diary. An empty array is an ordinary
+ * answer: it is what the conversation graph escalates on, and what a
+ * receptionist sees when a week is full.
+ */
+export const findSlots = (
+  clinicId: string,
+  params: {
+    doctor_id: string;
+    appointment_type_id: string;
+    start_date: string;
+    end_date: string;
+    earliest?: string;
+    latest?: string;
+    limit?: number;
+  },
+) => get<Slot[]>("/review/availability/slots", { clinicId, params });
+
+/** A doctor's weekly rule: this weekday, these hours, at this site. */
+export interface AvailabilityRule {
+  id: string;
+  location_id: string;
+  weekday: number;
+  weekday_name: string;
+  start_time: string;
+  end_time: string;
+  valid_from: string;
+  valid_until: string | null;
+}
+
+/** A dated departure from the weekly rules: a morning off, or extra hours. */
+export interface AvailabilityException {
+  id: string;
+  on_date: string;
+  kind: string;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+/** A doctor with the schedule behind them. */
+export interface DoctorDetail extends Doctor {
+  availability_rules: AvailabilityRule[];
+  availability_exceptions: AvailabilityException[];
+  upcoming_active_appointments: number;
+}
+
+export const getDoctor = (clinicId: string, doctorId: string) =>
+  get<DoctorDetail>(`/review/doctors/${doctorId}`, { clinicId });
+
+// =============================== M1: phones shared between patients
+
+/**
+ * One phone number with more than one patient on it.
+ *
+ * A household handset, or a carer's. It matters because a reminder sent there
+ * discloses an appointment to whoever answers, so M4's dispatch gate has to
+ * consult it -- and staff should know before then.
+ *
+ * `reference` is a short opaque handle rather than the number: the number
+ * itself is encrypted at rest and never returned by this route.
+ */
+export interface SharedHandset {
+  reference: string;
+  patient_count: number;
+  members: { patient_id: string; patient_name: string; relationship_kind: string }[];
+}
+
+export const listSharedHandsets = (clinicId: string) =>
+  get<SharedHandset[]>("/review/phone-bindings/shared", { clinicId });

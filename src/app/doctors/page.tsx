@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Stethoscope } from "lucide-react";
 import { cn } from "cn";
 
@@ -54,7 +55,16 @@ export default async function DoctorsPage() {
               <TableBody>
                 {page.items.map((doctor) => (
                   <TableRow key={doctor.id}>
-                    <TableCell className="font-medium">{doctor.full_name}</TableCell>
+                    <TableCell className="font-medium">
+                      {/* Links to the schedule behind them: the weekly rules,
+                          the dated exceptions, and what they can offer. */}
+                      <Link
+                        href={`/doctors/${doctor.id}`}
+                        className="hover:text-primary underline-offset-4 transition-colors hover:underline"
+                      >
+                        {doctor.full_name}
+                      </Link>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">
                       {doctor.specialty || "—"}
                     </TableCell>

@@ -88,8 +88,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             // The audit log names patients, so it is offered only to a role
             // that can read it. The page refuses on its own account too: a
             // hidden link is not a permission check.
+            // Both name several patients at once, so both are offered only
+            // to a role that may read them. Each page refuses on its own
+            // account too: a hidden link is not a permission check.
             ...(role === "admin"
-              ? [{ href: "/audit", label: t("nav.audit"), icon: "audit" as const }]
+              ? [
+                  {
+                    href: "/handsets",
+                    label: t("nav.handsets"),
+                    icon: "handsets" as const,
+                  },
+                  { href: "/audit", label: t("nav.audit"), icon: "audit" as const },
+                ]
               : []),
           ]}
           labels={{

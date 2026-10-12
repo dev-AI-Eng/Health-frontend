@@ -27,6 +27,7 @@ import {
   rescheduleAppointment,
   resolveEscalation,
 } from "@/lib/api";
+import { correctRow, findSlots, type Slot } from "@/lib/api-import";
 import { currentClinic } from "@/lib/clinic";
 
 /** What a form gets back. `ok: false` always carries something to display. */
@@ -221,5 +222,81 @@ export async function resolve(form: FormData): Promise<ActionResult> {
       return { ok: false, message: error.spanish };
     }
     return failure(error, "No se pudo marcar como resuelto.");
+  }
+}
+
+/**
+ * Find the times a doctor can actually offer.
+ *
+ * A read rather than a write, but it goes through an action because the form
+ * is interactive: a page cannot call the API, and the alternative would be a
+ * round trip through the URL on every search.
+ */
+export async function searchSlots(
+  form: FormData,
+): Promise<{ ok: true; slots: Slot[] } | { ok: false; message: string }> {
+  try {
+    const clinic = await currentClinic();
+    const doctorId = required(form, "doctor_id", "el médico");
+    const typeId = required(form, "appointment_type_id", "el tipo de cita");
+    const earliest = form.get("earliest");
+    const latest = form.get("latest");
+
+    const slots = await findSlots(clinic.id, {
+      doctor_id: doctorId,
+      appointment_type_id: typeId,
+      start_date: required(form, "start_date", "la fecha inicial"),
+      end_date: required(form, "end_date", "la fecha final"),
+      earliest: typeof earliest === "string" && earliest !== "" ? earliest : undefined,
+      latest: typeof latest === "string" && latest !== "" ? latest : undefined,
+      limit: 60,
+    });
+    return { ok: true, slots };
+  } catch (error) {
+    if (error instanceof MissingField) {
+      return { ok: false, message: error.spanish };
+    }
+    const result = failure(error, "No se pudieron buscar los horarios.");
+    return { ok: false, message: result.message };
+  }
+}
+
+/** Answer one cell of a row the importer could not convert on its own. */
+export async function correctImportRow(form: FormData): Promise<ActionResult> {
+  try {
+    const clinic = await currentClinic();
+    const sessionId = required(form, "session_id", "la importación");
+    const sheet = required(form, "sheet", "la hoja");
+    const rowNumber = Number(form.get("row_number"));
+    if (!Number.isInteger(rowNumber)) {
+      return { ok: false, message: "El número de fila no es válido." };
+    }
+
+    // Keyed by the canonical field, and only the cells that were filled in:
+    // sending an empty one would overwrite a value the reviewer left alone.
+    const cells: Record<string, string> = {};
+    for (const [key, value] of form.entries()) {
+      if (key.startsWith("cell.") && typeof value === "string" && value !== "") {
+        cells[key.slice("cell.".length)] = value;
+      }
+    }
+    if (Object.keys(cells).length === 0) {
+      return { ok: false, message: "No hay nada que corregir." };
+    }
+
+    await correctRow(clinic.id, sessionId, {
+      sheet,
+      row_number: rowNumber,
+      cells,
+    });
+
+    revalidatePath(`/import/${sessionId}/rows`);
+    revalidatePath(`/import/${sessionId}`);
+    return { ok: true, message: "Fila corregida." };
+  } catch (error) {
+    if (error instanceof MissingField) {
+      return { ok: false, message: error.spanish };
+    }
+    return failure(error, "No se pudo corregir la fila.");
   }
 }

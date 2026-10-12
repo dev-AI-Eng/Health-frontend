@@ -23,6 +23,7 @@ import {
   Loader2,
   Menu,
   Moon,
+  PhoneCall,
   Stethoscope,
   Sun,
   Upload,
@@ -46,6 +47,7 @@ const ICONS = {
   pending: Inbox,
   import: Upload,
   audit: FileCheck2,
+  handsets: PhoneCall,
 } as const;
 
 /**

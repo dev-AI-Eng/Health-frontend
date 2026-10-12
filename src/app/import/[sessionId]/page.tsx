@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, FileSearch, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, FileSearch, FileSpreadsheet, ListChecks } from "lucide-react";
 
 import { ApiFailure, PageHeading } from "@/components/page";
 import { ImportReview } from "@/components/import-review";
@@ -84,13 +84,24 @@ export default async function ImportSessionPage({
 
       {/* The per-cell evidence, one click away: it answers "why did this
           value become that", which is the question a reviewer asks next. */}
-      <Link
-        href={`/import/${sessionId}/log`}
-        className="text-muted-foreground hover:text-foreground mb-6 inline-flex items-center gap-1.5 text-sm transition-colors"
-      >
-        <FileSearch className="size-3.5" />
-        {t("log.view")}
-      </Link>
+      <div className="mb-6 flex flex-wrap gap-5">
+        <Link
+          href={`/import/${sessionId}/log`}
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
+        >
+          <FileSearch className="size-3.5" />
+          {t("log.view")}
+        </Link>
+        {/* The other axis: the log shows cells, this shows rows and lets a
+            reviewer answer one rather than ask for a new file. */}
+        <Link
+          href={`/import/${sessionId}/rows`}
+          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
+        >
+          <ListChecks className="size-3.5" />
+          {t("rows.viewRows")}
+        </Link>
+      </div>
 
       <ImportReview
         session={session}

@@ -398,6 +398,87 @@ const COPY = {
   "log.empty": ["No hay celdas en este estado.", "No cells in this state."],
   "log.view": ["Ver registro de conversión", "See the transform log"],
 
+  // ------------------------------------- M2: availability, made visible
+  "doctor.back": ["Volver a médicos", "Back to doctors"],
+  "doctor.schedule": ["Horario semanal", "Weekly schedule"],
+  "doctor.scheduleHint": [
+    "Los horarios disponibles se calculan con estas reglas cada vez que alguien pregunta. No se guarda una lista de turnos: una lista queda desactualizada en cuanto el médico cambia su horario o se declara un festivo.",
+    "Bookable times are computed from these rules every time somebody asks. No slot list is stored: a list goes stale the moment the doctor changes their hours or a holiday is declared.",
+  ],
+  "doctor.noRules": [
+    "Sin reglas de horario. Este médico no tiene horarios disponibles.",
+    "No schedule rules. This doctor has no bookable times.",
+  ],
+  "doctor.exceptions": ["Excepciones", "Exceptions"],
+  "doctor.exceptionsHint": [
+    "Días en que el horario normal no aplica: una mañana libre, o horas adicionales.",
+    "Days the normal schedule does not apply: a morning off, or extra hours.",
+  ],
+  "doctor.noExceptions": ["Sin excepciones registradas.", "No exceptions recorded."],
+  "doctor.unavailable": ["No disponible", "Unavailable"],
+  "doctor.extraHours": ["Horas adicionales", "Extra hours"],
+  "doctor.upcoming": ["Citas próximas", "Upcoming appointments"],
+  "doctor.allDay": ["Todo el día", "All day"],
+
+  "slots.title": ["Horarios disponibles", "Available times"],
+  "slots.subtitle": [
+    "Lo que este médico puede ofrecer realmente: se descuentan los festivos colombianos, las excepciones y lo que ya está en su agenda.",
+    "What this doctor can genuinely offer: Colombian holidays, exceptions and whatever already occupies their diary are all taken out.",
+  ],
+  "slots.from": ["Desde", "From"],
+  "slots.to": ["Hasta", "To"],
+  "slots.type": ["Tipo de cita", "Appointment type"],
+  "slots.earliest": ["No antes de", "Not before"],
+  "slots.latest": ["No después de", "Not after"],
+  "slots.search": ["Buscar horarios", "Find times"],
+  "slots.searching": ["Buscando…", "Searching…"],
+  "slots.found": ["horarios disponibles", "times available"],
+  "slots.none": [
+    "No hay horarios que cumplan esos límites. En una conversación real, esto es lo que se escala a una persona.",
+    "No times fit those limits. In a real conversation, this is what gets escalated to a person.",
+  ],
+  "slots.book": ["Agendar este horario", "Book this time"],
+  "slots.anyHour": ["Cualquier hora", "Any time"],
+
+  // ----------------------------------- M1: phones shared between patients
+  "nav.handsets": ["Teléfonos compartidos", "Shared phones"],
+  "handsets.title": ["Teléfonos compartidos", "Shared phones"],
+  "handsets.subtitle": [
+    "Números con más de un paciente. Un recordatorio enviado aquí lo lee quien contesta, así que M4 debe consultar esta lista antes de enviar.",
+    "Numbers with more than one patient on them. A reminder sent here is read by whoever answers, so M4 has to consult this list before sending.",
+  ],
+  "handsets.adminOnly": [
+    "Esta lista nombra varios pacientes juntos, así que requiere una sesión de administrador.",
+    "This list names several patients together, so it requires an administrator session.",
+  ],
+  "handsets.none": [
+    "Ningún teléfono está compartido entre pacientes.",
+    "No phone is shared between patients.",
+  ],
+  "handsets.patients": ["pacientes", "patients"],
+  "handsets.reference": ["Referencia", "Reference"],
+  "handsets.referenceHint": [
+    "El número está cifrado y no se devuelve. Esta referencia solo sirve para agrupar.",
+    "The number is encrypted and never returned. This reference only groups them.",
+  ],
+
+  // ------------------------------------------ M1: reviewing single rows
+  "rows.title": ["Filas por revisar", "Rows to review"],
+  "rows.subtitle": [
+    "Filas que el importador no pudo convertir solo. Corrija una celda aquí, o pida un archivo nuevo si son muchas.",
+    "Rows the importer could not convert on its own. Correct a cell here, or ask for a new file if there are many.",
+  ],
+  "rows.values": ["Valores", "Values"],
+  "rows.correct": ["Corregir", "Correct"],
+  "rows.correcting": ["Guardando…", "Saving…"],
+  "rows.corrected": ["Fila corregida.", "Row corrected."],
+  "rows.correctTitle": ["Corregir la fila", "Correct the row"],
+  "rows.correctHint": [
+    "El valor original del archivo se conserva. Su respuesta se guarda al lado, para que el registro siga sirviendo como evidencia de lo que llegó.",
+    "The file's original value is kept. Your answer is stored beside it, so the log keeps working as evidence of what arrived.",
+  ],
+  "rows.viewRows": ["Ver filas por revisar", "See the rows to review"],
+
   // ------------------------------------------------- M0: the audit log
   "nav.audit": ["Bitácora", "Audit log"],
   "audit.title": ["Bitácora de accesos", "Access audit log"],
