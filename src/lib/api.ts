@@ -524,3 +524,30 @@ export async function signInUpstream(
     setCookie: response.headers.get("set-cookie"),
   };
 }
+
+/**
+ * Sign out upstream.
+ *
+ * The session token is a signed HMAC rather than a stored record, so deleting
+ * this process's cookie is already enough to end the session — nothing on the
+ * API side outlives it. This call is still made, because the API owns the
+ * cookie it set and `DELETE /review/session` is how it clears it; leaving that
+ * to a second implementation here is how the two drift apart.
+ *
+ * Failure is deliberately ignored. Signing out must never leave somebody
+ * signed in because the API was unreachable, and the caller deletes the local
+ * cookie either way.
+ */
+export async function signOutUpstream(cookieHeader: string | undefined): Promise<void> {
+  if (!cookieHeader) return;
+  try {
+    await fetch(new URL("/review/session", API_BASE), {
+      method: "DELETE",
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      headers: { Accept: "application/json", Cookie: cookieHeader },
+    });
+  } catch {
+    // Unreachable API: the local cookie still goes.
+  }
+}

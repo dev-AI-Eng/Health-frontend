@@ -16,7 +16,7 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
-import { signInUpstream } from "@/lib/api";
+import { signInUpstream, signOutUpstream } from "@/lib/api";
 import { SESSION_COOKIE_NAME } from "@/lib/constants";
 import { translator, type Locale } from "@/lib/i18n";
 import { currentLocale } from "@/lib/locale";
@@ -76,7 +76,17 @@ export async function signIn(form: FormData): Promise<AuthResult> {
 
 export async function signOut(): Promise<AuthResult> {
   const t = translator(await currentLocale());
-  (await cookies()).delete(SESSION_COOKIE_NAME);
+  const store = await cookies();
+
+  // Told to the API first, while the cookie still exists to prove who is
+  // asking. The token is a signed HMAC rather than a stored record, so the
+  // local delete below is what actually ends the session; this call is here
+  // because the API set the cookie and owns clearing it. It cannot fail the
+  // sign-out: an unreachable API must not leave somebody signed in.
+  const token = store.get(SESSION_COOKIE_NAME)?.value;
+  await signOutUpstream(token ? `${SESSION_COOKIE_NAME}=${token}` : undefined);
+
+  store.delete(SESSION_COOKIE_NAME);
   revalidatePath("/", "layout");
   return { ok: true, message: t("auth.signedOut") };
 }
