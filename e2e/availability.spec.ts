@@ -65,7 +65,17 @@ test.describe("availability, made visible", () => {
     await page.getByRole("button", { name: /Buscar horarios/ }).click();
 
     // Slots, not a stored list: computed from the rules on this request.
-    await expect(page.getByText(/horarios disponibles/)).toBeVisible({ timeout: 30000 });
+    //
+    // Asserted on the list itself rather than on the visible phrase. Two
+    // earlier versions of this were wrong: "horarios disponibles" also appears
+    // in the paragraph explaining that no list is stored (two matches, strict
+    // mode refuses), and "\d+ horarios disponibles" matched an SVG path ending
+    // in digits next to that same paragraph — so it passed against a doctor
+    // with no availability at all. One item per computed slot is the fact the
+    // test is actually about.
+    const found = page.getByTestId("computed-slots");
+    await expect(found).toBeVisible({ timeout: 30000 });
+    expect(await found.locator("li").count()).toBeGreaterThan(0);
   });
 
   test("an impossible window produces the fallback, not an error", async ({

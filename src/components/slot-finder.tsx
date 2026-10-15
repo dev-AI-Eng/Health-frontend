@@ -206,7 +206,14 @@ export function SlotFinder({
               <p className="text-muted-foreground mb-3 text-sm">
                 {slots.length} {labels.found}
               </p>
-              <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {/* Named for the e2e test. Asserting on the visible phrase
+                  instead matched the prose above it and even an SVG path
+                  ending in digits, so the test passed on a doctor with no
+                  availability at all. A computed slot is a list item here. */}
+              <ul
+                data-testid="computed-slots"
+                className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
+              >
                 {slots.map((slot) => (
                   <li
                     key={slot.start}
