@@ -51,6 +51,27 @@ Unset, those five skip rather than fail: a missing local credential is not a
 broken dashboard. The tests that assert the *masked* view still run, so an
 absent password cannot turn the masking guarantee green by accident.
 
+
+## The conversation simulator (M3)
+
+`/conversation` drives the real conversation graph: identification from the
+phone number, consent, intent, tools, and the four-stage safety gate.
+
+It is a **review surface**, not a chat window. A reply alone would prove the
+pipeline emits Spanish; M3's exit criteria are about the gate, so the screen
+also shows every draft attempt with its verdict, the quoted text that caused
+each refusal, the retry count, and the verified facts the reply was allowed to
+state. That last panel is the only way to see rule 4 holding — that the message
+contains nothing a tool did not establish.
+
+Built here rather than on a hosted bot tester for one deciding reason: a hosted
+tool means conversation content leaving the machine, and only synthetic data is
+permitted. It also reuses the clinic scope and auth already present.
+
+```bash
+npx playwright test e2e/conversation.spec.ts   # 10 tests over the real screen
+```
+
 ## How it talks to the API
 
 Every request is made in the Node process, never from the browser. `src/lib/api.ts`
