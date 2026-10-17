@@ -567,3 +567,130 @@ export const runConversationTurn = (
   clinicId: string,
   body: { sender_phone: string; text: string },
 ) => post<ConversationTurn>("/review/conversation/turn", { clinicId, body });
+
+// =============================== M4: management reporting
+
+/** One cancellation reason, split by who cancelled. */
+export interface CancellationReason {
+  reason: string;
+  actor: string;
+  count: number;
+}
+
+/** Counts per event kind, plus the scheduled denominator. */
+export interface Funnel {
+  offered: number;
+  confirmed: number;
+  rescheduled: number;
+  cancelled: number;
+  no_show: number;
+  completed: number;
+  scheduled: number;
+}
+
+/**
+ * The summary panel.
+ *
+ * `formulas` arrives from the API rather than living here on purpose: Rev3
+ * requires each formula printed on the report, and a copy in the frontend is a
+ * copy that drifts from the SQL that produced the number.
+ *
+ * Every percentage may be null, which is not the same as zero. A clinic with no
+ * appointments has no no-show rate, and rendering 0% would read as perfect
+ * attendance.
+ */
+export interface ReportSummary {
+  funnel: Funnel;
+  percentages: Record<string, number | null>;
+  formulas: Record<string, string>;
+  cancellations: CancellationReason[];
+}
+
+/** One municipality and neighbourhood. `suppressed` means too small to publish. */
+export interface ZoneRow {
+  municipality_divipola: string | null;
+  neighborhood: string | null;
+  appointments: number;
+  no_shows: number;
+  no_show_pct: number | null;
+  suppressed: boolean;
+}
+
+/**
+ * The geographic view.
+ *
+ * `suppressed_groups` is returned so the screen can say how many groups were
+ * hidden. A reader who cannot see that data was withheld reads the rest as
+ * complete.
+ */
+export interface ZoneReport {
+  rows: ZoneRow[];
+  suppressed_groups: number;
+  minimum_group_size: number;
+}
+
+/**
+ * Start delay and overrun for one doctor, with the coverage behind them.
+ *
+ * The coverage is not decoration. A mean delay over four of ninety
+ * appointments describes those four, and a manager shown the mean alone will
+ * read it as the doctor.
+ */
+export interface PunctualityRow {
+  doctor_id: string;
+  doctor_name: string;
+  total: number;
+  recorded_start: number;
+  recorded_end: number;
+  mean_start_delay_minutes: number | null;
+  mean_overrun_minutes: number | null;
+  start_coverage_pct: number | null;
+  end_coverage_pct: number | null;
+}
+
+/** One appointment needing a decision. `no_response` is the follow-up list. */
+export interface FollowUpRow {
+  appointment_id: string;
+  patient_id: string;
+  patient_name: string;
+  starts_at: string;
+  doctor_name: string;
+  response: string;
+  reminded: boolean;
+}
+
+/**
+ * A date range, and the optional narrowing every report accepts.
+ *
+ * A type alias with an index signature rather than an interface: `request`
+ * takes `Record<string, string | number | undefined>` for its query
+ * parameters, and an interface without one is not assignable to it.
+ */
+export type ReportRange = {
+  start_date?: string;
+  end_date?: string;
+  doctor_id?: string;
+  location_id?: string;
+  [key: string]: string | number | undefined;
+};
+
+export const getReportSummary = (clinicId: string, range: ReportRange = {}) =>
+  get<ReportSummary>("/review/reports/summary", { clinicId, params: range });
+
+export const getZoneReport = (clinicId: string, range: ReportRange = {}) =>
+  get<ZoneReport>("/review/reports/zones", { clinicId, params: range });
+
+export const getPunctuality = (clinicId: string, range: ReportRange = {}) =>
+  get<PunctualityRow[]>("/review/reports/punctuality", { clinicId, params: range });
+
+export const getFollowUp = (
+  clinicId: string,
+  range: ReportRange & { response?: string; limit?: number } = {},
+) => get<FollowUpRow[]>("/review/reports/follow-up", { clinicId, params: range });
+
+/** Record check-in, start, end or no-show. One button press. */
+export const recordAttendance = (clinicId: string, appointmentId: string, step: string) =>
+  post<{ appointment_id: string; status: string }>(
+    `/review/appointments/${appointmentId}/attendance/${step}`,
+    { clinicId },
+  );

@@ -23,6 +23,8 @@ import {
   Loader2,
   Menu,
   Moon,
+  BarChart3,
+  ClipboardList,
   MessagesSquare,
   PhoneCall,
   Stethoscope,
@@ -50,6 +52,8 @@ const ICONS = {
   audit: FileCheck2,
   handsets: PhoneCall,
   conversation: MessagesSquare,
+  reports: BarChart3,
+  followUp: ClipboardList,
 } as const;
 
 /**

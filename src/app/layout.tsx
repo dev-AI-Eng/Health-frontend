@@ -92,6 +92,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             // to a role that may read them. Each page refuses on its own
             // account too: a hidden link is not a permission check.
             {
+              href: "/follow-up",
+              label: t("nav.followUp"),
+              icon: "followUp" as const,
+            },
+            {
+              href: "/reports",
+              label: t("nav.reports"),
+              icon: "reports" as const,
+            },
+            {
               href: "/conversation",
               label: t("nav.conversation"),
               icon: "conversation" as const,
