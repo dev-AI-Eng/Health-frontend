@@ -91,6 +91,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             // Both name several patients at once, so both are offered only
             // to a role that may read them. Each page refuses on its own
             // account too: a hidden link is not a permission check.
+            {
+              href: "/conversation",
+              label: t("nav.conversation"),
+              icon: "conversation" as const,
+            },
             ...(role === "admin"
               ? [
                   {

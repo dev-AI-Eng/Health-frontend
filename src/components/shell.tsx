@@ -23,6 +23,7 @@ import {
   Loader2,
   Menu,
   Moon,
+  MessagesSquare,
   PhoneCall,
   Stethoscope,
   Sun,
@@ -48,6 +49,7 @@ const ICONS = {
   import: Upload,
   audit: FileCheck2,
   handsets: PhoneCall,
+  conversation: MessagesSquare,
 } as const;
 
 /**

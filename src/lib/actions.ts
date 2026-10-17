@@ -27,7 +27,13 @@ import {
   rescheduleAppointment,
   resolveEscalation,
 } from "@/lib/api";
-import { correctRow, findSlots, type Slot } from "@/lib/api-import";
+import {
+  correctRow,
+  findSlots,
+  runConversationTurn,
+  type ConversationTurn,
+  type Slot,
+} from "@/lib/api-import";
 import { currentClinic } from "@/lib/clinic";
 
 /** What a form gets back. `ok: false` always carries something to display. */
@@ -298,5 +304,32 @@ export async function correctImportRow(form: FormData): Promise<ActionResult> {
       return { ok: false, message: error.spanish };
     }
     return failure(error, "No se pudo corregir la fila.");
+  }
+}
+
+/**
+ * Run one conversation turn through the graph (M3).
+ *
+ * Returns the whole turn, not a message: the screen is a review surface and
+ * needs the drafts and the gate's findings, which is the only way to see that
+ * nothing refused was sent.
+ *
+ * Nothing is revalidated. A turn can change an appointment — confirming or
+ * cancelling one — but the simulator exists to show the pipeline rather than
+ * to drive the diary, and revalidating the whole layout on every keystroke of
+ * a demo would be noise. A reviewer checking the effect opens /appointments.
+ */
+export async function simulateTurn(
+  form: FormData,
+): Promise<ActionResult & { turn?: ConversationTurn }> {
+  try {
+    const clinic = await currentClinic();
+    const turn = await runConversationTurn(clinic.id, {
+      sender_phone: required(form, "sender_phone", "el número"),
+      text: String(form.get("text") ?? ""),
+    });
+    return { ok: true, message: "", turn };
+  } catch (error) {
+    return failure(error, "No se pudo procesar el mensaje.");
   }
 }

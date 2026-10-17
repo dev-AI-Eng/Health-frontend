@@ -548,6 +548,50 @@ const COPY = {
   // ------------------------------------------------------------ the failures
   "error.title": ["No se pudo cargar la información", "Could not load the data"],
   "error.reference": ["referencia", "reference"],
+
+  // --- M3: the conversation pipeline
+  "nav.conversation": ["Conversación", "Conversation"],
+  "chat.title": ["Simulador de conversación", "Conversation simulator"],
+  "chat.subtitle": [
+    "Escriba lo que enviaría un paciente. El mensaje pasa por el grafo real: identificación, consentimiento, intención, herramientas y la compuerta de seguridad.",
+    "Type what a patient would send. The message runs through the real graph: identification, consent, intent, tools and the safety gate.",
+  ],
+  "chat.phone": ["Número del paciente", "Patient's number"],
+  "chat.phoneHint": [
+    "El paciente se resuelve desde el número, igual que en WhatsApp. Un número no registrado recibe una respuesta que no menciona a nadie.",
+    "The patient is resolved from the number, as WhatsApp would. An unregistered number gets a reply that names nobody.",
+  ],
+  "chat.message": ["Mensaje del paciente", "Patient's message"],
+  "chat.send": ["Enviar", "Send"],
+  "chat.sending": ["Procesando…", "Processing…"],
+  "chat.patient": ["Paciente", "Patient"],
+  "chat.clinic": ["Clínica", "Clinic"],
+  "chat.intent": ["Intención", "Intent"],
+  "chat.stop": ["Salida temprana", "Early exit"],
+  "chat.attempts": ["Intentos de redacción", "Draft attempts"],
+  "chat.drafts": ["Borradores y veredictos", "Drafts and verdicts"],
+  "chat.draftsHint": [
+    "Cada borrador y lo que la compuerta decidió. Nada rechazado se envía, y el límite de reintentos es dos.",
+    "Every draft and what the gate decided. Nothing refused is sent, and the retry limit is two.",
+  ],
+  "chat.approved": ["Aprobado", "Approved"],
+  "chat.refused": ["Rechazado", "Refused"],
+  "chat.templated": ["Plantilla aprobada", "Approved template"],
+  "chat.generated": ["Generado", "Generated"],
+  "chat.facts": ["Datos verificados", "Verified facts"],
+  "chat.factsHint": [
+    "Lo único que el mensaje puede afirmar. Cualquier dato que no esté aquí se rechaza como inventado.",
+    "The only things the message may state. Anything not here is refused as fabricated.",
+  ],
+  "chat.noFacts": ["Ningún dato verificado todavía.", "No verified facts yet."],
+  "chat.escalated": ["Escalado a una persona", "Escalated to a person"],
+  "chat.nothingSent": [
+    "No se envió nada. Esto solo ocurre por un error de enrutamiento.",
+    "Nothing was sent. This only happens through a routing bug.",
+  ],
+  "chat.examples": ["Ejemplos", "Examples"],
+  "chat.noPatient": ["Número no reconocido", "Number not recognised"],
+  "chat.resolved": ["Paciente identificado", "Patient identified"],
 } as const satisfies Record<string, readonly [string, string]>;
 
 export type CopyKey = keyof typeof COPY;

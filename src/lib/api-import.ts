@@ -511,3 +511,59 @@ export interface SharedHandset {
 
 export const listSharedHandsets = (clinicId: string) =>
   get<SharedHandset[]>("/review/phone-bindings/shared", { clinicId });
+
+// =============================== M3: the conversation pipeline
+
+/** One reason the gate refused a draft, with the text that caused it. */
+export interface GateFinding {
+  reason: string;
+  span: string;
+  detail: string;
+}
+
+/**
+ * One draft attempt and the gate's verdict on it.
+ *
+ * Every attempt is returned, not only the last. ADR-23 bounds retries at two,
+ * and the only way to see that bound holding is to count the drafts.
+ */
+export interface ConversationDraft {
+  text: string;
+  kind: string;
+  approved: boolean;
+  templated: boolean;
+  findings: GateFinding[];
+}
+
+/**
+ * What one turn through the graph produced.
+ *
+ * `outbound_text` is what the patient would receive. `stop` names which of the
+ * eight early exits the turn took, or is null when it ran to dispatch. The
+ * drafts and `verified_facts` are what make the screen a review surface rather
+ * than a chat window: they show that the reply states only facts a tool
+ * established, and that nothing the gate refused was sent.
+ */
+export interface ConversationTurn {
+  intent: string;
+  stop: string | null;
+  outbound_text: string | null;
+  drafts: ConversationDraft[];
+  attempts: number;
+  reason_codes: string[];
+  patient_resolved: boolean;
+  escalation_id: string | null;
+  verified_facts: Record<string, string>;
+}
+
+/**
+ * Run one turn as a patient would send it.
+ *
+ * Takes a phone number rather than a patient id on purpose: the graph resolves
+ * the patient from the number's blind index exactly as a real channel will, so
+ * naming a patient directly would skip the step worth demonstrating.
+ */
+export const runConversationTurn = (
+  clinicId: string,
+  body: { sender_phone: string; text: string },
+) => post<ConversationTurn>("/review/conversation/turn", { clinicId, body });
