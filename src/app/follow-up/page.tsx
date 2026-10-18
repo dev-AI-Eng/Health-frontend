@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Info, PhoneCall } from "lucide-react";
 import { cn } from "cn";
 
+import { LiveUpdates } from "@/components/live";
 import { ApiFailure, Empty, PageHeading } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -84,7 +85,16 @@ export default async function FollowUpPage({
 
   return (
     <>
-      <PageHeading title={t("followUp.title")} subtitle={t("followUp.subtitle")} />
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+        <PageHeading title={t("followUp.title")} subtitle={t("followUp.subtitle")} />
+        <LiveUpdates
+          labels={{
+            live: t("live.live"),
+            polling: t("live.polling"),
+            updated: t("live.updated"),
+          }}
+        />
+      </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
         {FILTERS.map((filter) => (

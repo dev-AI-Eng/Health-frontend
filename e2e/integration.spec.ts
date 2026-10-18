@@ -45,8 +45,12 @@ function freeSlot(): { date: string; time: string } {
   const minuteOfDay = 7 * 60 + (minutesFromStart % (8 * 60));
   const hh = String(Math.floor(minuteOfDay / 60)).padStart(2, "0");
   const mm = String(minuteOfDay % 60).padStart(2, "0");
-  // Unique per process, so a re-run does not collide with the previous one.
-  const month = String(((process.pid + slotCounter) % 9) + 1).padStart(2, "0");
+  // Unique per process, so a re-run does not collide with the previous one --
+  // but fixed *within* a process. It used to include `slotCounter`, which gave
+  // every call a different month: the double-booking test then booked two
+  // different slots and never saw the refusal it exists to check. The counter
+  // already varies the day and time, so the month only needs to vary per run.
+  const month = String((process.pid % 9) + 1).padStart(2, "0");
   return { date: `2028-${month}-${String(day).padStart(2, "0")}`, time: `${hh}:${mm}` };
 }
 

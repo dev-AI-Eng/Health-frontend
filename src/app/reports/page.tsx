@@ -1,5 +1,6 @@
 import { Info } from "lucide-react";
 
+import { LiveUpdates } from "@/components/live";
 import { ApiFailure, PageHeading } from "@/components/page";
 import {
   CancellationTable,
@@ -60,7 +61,16 @@ export default async function ReportsPage({
 
   return (
     <>
-      <PageHeading title={t("reports.title")} subtitle={t("reports.subtitle")} />
+      <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+        <PageHeading title={t("reports.title")} subtitle={t("reports.subtitle")} />
+        <LiveUpdates
+          labels={{
+            live: t("live.live"),
+            polling: t("live.polling"),
+            updated: t("live.updated"),
+          }}
+        />
+      </div>
 
       <section className="mb-8">
         <h2 className="mb-3 text-sm font-semibold">{t("reports.funnel")}</h2>

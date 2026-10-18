@@ -681,6 +681,9 @@ const COPY = {
   "range.from": ["Desde", "From"],
   "range.to": ["Hasta", "To"],
   "range.apply": ["Aplicar", "Apply"],
+  "live.live": ["En vivo", "Live"],
+  "live.polling": ["Revisando cada 45 s", "Checking every 45s"],
+  "live.updated": ["Actualizado", "Updated"],
 } as const satisfies Record<string, readonly [string, string]>;
 
 export type CopyKey = keyof typeof COPY;
