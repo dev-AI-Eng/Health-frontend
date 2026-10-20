@@ -3,6 +3,7 @@ import { CalendarDays, CalendarPlus } from "lucide-react";
 
 import { ApiFailure, Empty, PageHeading, StatusBadge } from "@/components/page";
 import { ConfirmAction, RescheduleDialog } from "@/components/forms";
+import { LiveUpdates } from "@/components/live";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -76,12 +77,21 @@ export default async function AppointmentsPage() {
         title={t("appointments.title")}
         subtitle={`${nf.format(page.total)} ${t("appointments.total")} · ${t("appointments.showing")} ${page.items.length}`}
         action={
-          <Button asChild>
-            <Link href="/appointments/new">
-              <CalendarPlus className="size-4" />
-              {t("appointments.new")}
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <LiveUpdates
+              labels={{
+                live: t("live.live"),
+                polling: t("live.polling"),
+                updated: t("live.updated"),
+              }}
+            />
+            <Button asChild>
+              <Link href="/appointments/new">
+                <CalendarPlus className="size-4" />
+                {t("appointments.new")}
+              </Link>
+            </Button>
+          </div>
         }
       />
 

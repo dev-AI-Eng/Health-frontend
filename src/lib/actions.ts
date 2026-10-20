@@ -159,6 +159,54 @@ export async function cancel(form: FormData): Promise<ActionResult> {
   }
 }
 
+/**
+ * A patient cancelling their own appointment.
+ *
+ * Separate from `cancel` on purpose, and the separation is the control. This
+ * one forwards the patient's phone, so the API resolves it against the
+ * clinic's phone bindings and refuses the call for anybody else's appointment.
+ * `cancel` forwards nothing and may cancel any appointment in the clinic,
+ * which is the staff path.
+ *
+ * Two functions rather than one with an optional argument, because a caller
+ * that forgot the argument would silently get the staff path -- the more
+ * permissive one. Forgetting here means calling the wrong function, which is
+ * visible at the call site and in review.
+ *
+ * The phone comes from the form, which is the patient confirming the number
+ * the clinic holds for them. It is not identity on its own -- ADR-18 is
+ * explicit that a number asserts contactability -- which is why the API
+ * refuses a number bound to several patients instead of guessing which family
+ * member is asking.
+ */
+export async function cancelOwn(form: FormData): Promise<ActionResult> {
+  try {
+    const clinic = await currentClinic();
+    const id = required(form, "appointment_id", "la cita");
+    const phone = required(form, "patient_phone", "su número de teléfono");
+    const reason = form.get("reason");
+    await cancelAppointment(
+      clinic.id,
+      id,
+      typeof reason === "string" && reason.trim() !== "" ? reason : undefined,
+      phone,
+    );
+
+    revalidatePath("/appointments");
+    revalidatePath("/");
+    return { ok: true, message: "Su cita quedó cancelada. El horario está libre." };
+  } catch (error) {
+    if (error instanceof MissingField) {
+      return { ok: false, message: error.spanish };
+    }
+    // The API's Spanish is better than anything this layer could invent: it
+    // distinguishes "that appointment is not in your name" from "that number
+    // is not registered" from "that number belongs to several people", and a
+    // patient needs to know which.
+    return failure(error, "No se pudo cancelar la cita.");
+  }
+}
+
 export async function confirm(form: FormData): Promise<ActionResult> {
   try {
     const clinic = await currentClinic();
