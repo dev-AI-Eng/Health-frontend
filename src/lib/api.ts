@@ -118,12 +118,26 @@ export async function request<T>(
     clinicId,
     params,
     body,
+    patientPhone,
     timeoutMs = TIMEOUT_MS,
   }: {
     method?: "GET" | "POST" | "PUT";
     clinicId?: string;
     params?: Record<string, string | number | undefined>;
     body?: unknown;
+    /**
+     * The patient's own phone, when this call is made *as* that patient.
+     *
+     * Sent as `X-Patient-Phone`, which is how the API decides a caller may
+     * change this appointment and no other. Omitted for a staff screen, which
+     * is the path the dashboard uses: staff act for any patient and their own
+     * authentication is M5's.
+     *
+     * A header rather than a body field, deliberately, matching the API: a
+     * body field would sit alongside the appointment's own data and a route
+     * that forgot to read it would silently accept whatever the caller sent.
+     */
+    patientPhone?: string;
     /** Overrides `TIMEOUT_MS` for a call that is legitimately slower. */
     timeoutMs?: number;
   } = {},
@@ -167,6 +181,7 @@ export async function request<T>(
         Accept: "application/json",
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         ...(cookie === undefined ? {} : { Cookie: cookie }),
+        ...(patientPhone === undefined ? {} : { "X-Patient-Phone": patientPhone }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -233,6 +248,7 @@ export const post = <T>(
     clinicId?: string;
     params?: Record<string, string | number | undefined>;
     body?: unknown;
+    patientPhone?: string;
   } = {},
 ): Promise<T> => request<T>(path, { ...options, method: "POST" });
 
@@ -435,17 +451,38 @@ export const holdSlot = (
   body: BookRequest & { minutes?: number },
 ) => post<Appointment>("/review/appointments/holds", { clinicId, body });
 
-export const confirmHold = (clinicId: string, appointmentId: string) =>
-  post<Appointment>(`/review/appointments/${appointmentId}/confirm`, { clinicId });
+export const confirmHold = (
+  clinicId: string,
+  appointmentId: string,
+  patientPhone?: string,
+) =>
+  post<Appointment>(`/review/appointments/${appointmentId}/confirm`, {
+    clinicId,
+    patientPhone,
+  });
 
+/**
+ * Cancel an appointment.
+ *
+ * `patientPhone` makes this a *patient* cancelling their own appointment: the
+ * API resolves the number against the clinic's phone bindings and refuses the
+ * call for anybody else's row. Omit it for the staff dashboard, which may
+ * cancel any appointment in the clinic.
+ *
+ * Omitting it is not "no authorisation" so much as "the staff path", whose own
+ * authentication is M5. Stated here because the difference is invisible at the
+ * call site otherwise.
+ */
 export const cancelAppointment = (
   clinicId: string,
   appointmentId: string,
   reason?: string,
+  patientPhone?: string,
 ) =>
   post<Appointment>(`/review/appointments/${appointmentId}/cancel`, {
     clinicId,
     body: { reason: reason ?? null },
+    patientPhone,
   });
 
 /**
@@ -459,10 +496,12 @@ export const rescheduleAppointment = (
   clinicId: string,
   appointmentId: string,
   body: { start: string; duration_minutes: number; idempotency_key?: string },
+  patientPhone?: string,
 ) =>
   post<Appointment>(`/review/appointments/${appointmentId}/reschedule`, {
     clinicId,
     body,
+    patientPhone,
   });
 
 
