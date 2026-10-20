@@ -111,12 +111,6 @@ const COPY = {
   "doctors.inactive": ["inactivo", "inactive"],
 
   // ------------------------------------------------------------- appointments
-  // The live-update indicator. A receptionist who cannot tell whether the
-  // screen is current will refresh it herself, and then the feature has not
-  // helped -- so the state is shown rather than assumed.
-  "live.live": ["En vivo", "Live"],
-  "live.polling": ["Revisando cada 45 s", "Checking every 45s"],
-  "live.updated": ["Actualizado", "Updated"],
   "appointments.title": ["Citas", "Appointments"],
   "appointments.empty": [
     "Todavía no hay citas agendadas.",
