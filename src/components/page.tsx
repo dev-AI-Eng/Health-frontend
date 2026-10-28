@@ -5,6 +5,7 @@
  * shipped to the browser.
  */
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { AlertTriangle, EyeOff, Inbox, ShieldCheck } from "lucide-react";
 import { cn } from "cn";
@@ -47,15 +48,29 @@ export function Stat({
   value,
   icon,
   tone,
+  href,
 }: {
   label: string;
   value: ReactNode;
   icon?: ReactNode;
   /** Highlights a figure that means somebody has to do something. */
   tone?: "default" | "attention";
+  /**
+   * Where the figure's own screen is. When given, the whole card is the link:
+   * a receptionist looking at "Médicos 8" expects to click it and see the
+   * eight, and a small arrow she has to aim at is a worse target than the
+   * card. Left off for a count with no screen of its own, so nothing on the
+   * overview looks clickable and then goes nowhere.
+   */
+  href?: string;
 }) {
-  return (
-    <Card className={cn(tone === "attention" && "border-amber-200 dark:border-amber-900/60")}>
+  const card = (
+    <Card
+      className={cn(
+        tone === "attention" && "border-amber-200 dark:border-amber-900/60",
+        href && "group-hover:border-primary/40 transition-colors",
+      )}
+    >
       <CardContent className="flex items-start justify-between gap-3 py-1">
         <div className="min-w-0">
           <p className="text-muted-foreground truncate text-xs font-medium tracking-wide uppercase">
@@ -77,6 +92,16 @@ export function Stat({
         ) : null}
       </CardContent>
     </Card>
+  );
+
+  if (!href) return card;
+  return (
+    <Link
+      href={href}
+      className="group focus-visible:ring-ring/50 block rounded-xl outline-none focus-visible:ring-[3px]"
+    >
+      {card}
+    </Link>
   );
 }
 

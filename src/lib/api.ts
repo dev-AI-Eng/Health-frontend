@@ -77,6 +77,20 @@ export function spanishFor(status: number, detail?: string): string {
   if ((status === 409 || status === 404) && detail && looksSpanish(detail)) {
     return detail;
   }
+  // A 422 the API wrote itself says what was wrong with what was typed: "El
+  // número de teléfono no es válido." Without this it became "La consulta no es
+  // válida. Avise al equipo técnico." -- sending a receptionist who mistyped a
+  // phone number to the technical team, and throwing away the one sentence that
+  // told her how to fix it.
+  //
+  // Only a *string* detail qualifies. The framework's own validation failure
+  // puts a list of English objects in `detail`, never a string, so that case
+  // still falls through to the generic line below and nothing English reaches
+  // the screen. The `typeof` is what makes that distinction, not the language
+  // heuristic: "Value error, not a valid email" would pass `looksSpanish`.
+  if (status === 422 && typeof detail === "string" && looksSpanish(detail)) {
+    return detail;
+  }
   if (status === 404) {
     return "Esta información no está disponible en este momento.";
   }
@@ -299,9 +313,14 @@ export interface Patient {
   is_minor: boolean;
   phone_masked: string | null;
   email_masked: string | null;
+  /** The patient's insurer as the clinic wrote it. Never masked. */
+  eps: string | null;
+  /** Who to try when the patient does not answer. */
+  secondary_contact_name: string | null;
+  secondary_contact_phone_masked: string | null;
   created_at: string;
   /**
-   * False when the three `_masked` fields above carry real values.
+   * False when the `_masked` fields above carry real values.
    *
    * The API keeps the field names for compatibility and says which it sent
    * with this flag, so a screen never has to guess from whether a value
@@ -317,6 +336,10 @@ export interface Doctor {
   full_name: string;
   specialty: string;
   active: boolean;
+  /** How staff reach the doctor. Shown in full: see the API's note on why. */
+  phone: string | null;
+  secondary_phone: string | null;
+  email: string | null;
 }
 
 export interface Appointment {
@@ -346,8 +369,27 @@ export const listClinics = () => get<Clinic[]>("/review/clinics");
 
 export const getSummary = (clinicId: string) => get<Summary>("/review/summary", { clinicId });
 
-export const listPatients = (clinicId: string, params?: { limit?: number; offset?: number }) =>
-  get<Page<Patient>>("/review/patients", { clinicId, params });
+/**
+ * Patients of the clinic, optionally narrowed to one exact phone or document.
+ *
+ * Both are exact matches: names and identifiers are encrypted at rest, so the
+ * API can ask a blind index "is this the number?" and cannot ask "does this
+ * start with". The API canonicalises what is typed ("300 111 2233",
+ * "1.020.304.050") before looking it up, so callers pass the text as typed.
+ */
+export const listPatients = (
+  clinicId: string,
+  params?: { limit?: number; offset?: number; phone?: string; documentNumber?: string },
+) =>
+  get<Page<Patient>>("/review/patients", {
+    clinicId,
+    params: {
+      limit: params?.limit,
+      offset: params?.offset,
+      phone: params?.phone,
+      document_number: params?.documentNumber,
+    },
+  });
 
 export const listDoctors = (clinicId: string, params?: { limit?: number; offset?: number }) =>
   get<Page<Doctor>>("/review/doctors", { clinicId, params });
