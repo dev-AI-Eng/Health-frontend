@@ -96,6 +96,23 @@ const COPY = {
   "patients.col.age": ["Edad", "Age"],
   "patients.col.mobile": ["Celular", "Mobile"],
   "patients.col.email": ["Correo", "Email"],
+  "patients.col.eps": ["EPS", "Insurer (EPS)"],
+  "patients.col.secondary": ["Contacto alterno", "Alternate contact"],
+  "patients.search.document": ["Documento", "Document"],
+  "patients.search.phone": ["Celular", "Mobile"],
+  "patients.search.submit": ["Buscar", "Search"],
+  "patients.search.clear": ["Limpiar", "Clear"],
+  // Said on the screen, not left to be discovered: the match is exact because
+  // names and identifiers are encrypted, and a receptionist who types half a
+  // number and sees nobody would otherwise conclude the patient is missing.
+  "patients.search.hint": [
+    "La búsqueda es exacta: escriba el número completo, con o sin puntos y espacios. Todavía no se puede buscar por nombre.",
+    "Search is exact: type the full number, with or without dots and spaces. Searching by name is not available yet.",
+  ],
+  "patients.noMatch": [
+    "Ningún paciente coincide con esa búsqueda. Verifique que el número esté completo.",
+    "No patient matches that search. Check that the number is complete.",
+  ],
   "patients.minor": ["menor", "minor"],
 
   // ------------------------------------------------------------------ doctors
@@ -105,6 +122,9 @@ const COPY = {
     "No doctors registered yet.",
   ],
   "doctors.col.doctor": ["Médico", "Doctor"],
+  "doctors.col.phone": ["Celular", "Mobile"],
+  "doctors.col.secondaryPhone": ["Teléfono 2", "Second phone"],
+  "doctors.col.email": ["Correo", "Email"],
   "doctors.col.specialty": ["Especialidad", "Specialty"],
   "doctors.col.status": ["Estado", "Status"],
   "doctors.active": ["activo", "active"],

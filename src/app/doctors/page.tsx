@@ -49,6 +49,9 @@ export default async function DoctorsPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>{t("doctors.col.doctor")}</TableHead>
                   <TableHead>{t("doctors.col.specialty")}</TableHead>
+                  <TableHead>{t("doctors.col.phone")}</TableHead>
+                  <TableHead>{t("doctors.col.secondaryPhone")}</TableHead>
+                  <TableHead>{t("doctors.col.email")}</TableHead>
                   <TableHead>{t("doctors.col.status")}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -67,6 +70,15 @@ export default async function DoctorsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {doctor.specialty || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      {doctor.phone ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground font-mono text-xs">
+                      {doctor.secondary_phone ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground max-w-[14rem] truncate text-sm">
+                      {doctor.email ?? "—"}
                     </TableCell>
                     <TableCell>
                       {/* An inactive doctor keeps their history but takes no new
