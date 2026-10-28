@@ -28,18 +28,33 @@ import { currentLocale } from "@/lib/locale";
 export const dynamic = "force-dynamic";
 
 /** The counts worth showing, in the order they make sense to read. */
-const COUNTS: ReadonlyArray<{ key: string; label: CopyKey; icon: React.ReactNode }> = [
-  { key: "patients", label: "count.patients", icon: <Users className="size-4" /> },
+const COUNTS: ReadonlyArray<{
+  key: string;
+  label: CopyKey;
+  icon: React.ReactNode;
+  /** The screen behind the figure. Absent where there is none: consents and
+   *  locations have no screen of their own, so those cards are not links. */
+  href?: string;
+}> = [
+  { key: "patients", label: "count.patients", icon: <Users className="size-4" />, href: "/patients" },
   {
     key: "appointments",
     label: "count.appointments",
     icon: <CalendarDays className="size-4" />,
+    href: "/appointments",
   },
-  { key: "doctors", label: "count.doctors", icon: <Stethoscope className="size-4" /> },
+  {
+    key: "doctors",
+    label: "count.doctors",
+    icon: <Stethoscope className="size-4" />,
+    href: "/doctors",
+  },
   {
     key: "availability_rules",
     label: "count.availability_rules",
     icon: <ClipboardList className="size-4" />,
+    // The rules are each doctor's weekly hours, which live on the doctor's page.
+    href: "/doctors",
   },
   { key: "consents", label: "count.consents", icon: <ShieldCheck className="size-4" /> },
   { key: "locations", label: "count.locations", icon: <MapPin className="size-4" /> },
@@ -121,12 +136,13 @@ export default async function OverviewPage() {
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {COUNTS.map(({ key, label, icon }) => (
+        {COUNTS.map(({ key, label, icon, href }) => (
           <Stat
             key={key}
             label={t(label)}
             value={nf.format(summary.row_counts[key] ?? 0)}
             icon={icon}
+            href={href}
           />
         ))}
       </div>

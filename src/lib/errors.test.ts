@@ -176,3 +176,43 @@ test("an English detail never reaches the screen, whatever the status", async ()
     assert.ok(!error.spanish.includes("Not Found"));
   }
 });
+
+test("a 422 the API wrote shows its own Spanish, so a typo can be fixed", async () => {
+  // The patients search answers 422 "El número de teléfono no es válido." for a
+  // number that cannot be a phone. It used to be replaced by "Avise al equipo
+  // técnico" -- a receptionist who mistyped a digit was told to call IT.
+  // Found by typing a bad number into the search box in the running app.
+  const error = await failingCall(() =>
+    Promise.resolve(
+      new Response(JSON.stringify({ detail: "El número de teléfono no es válido." }), {
+        status: 422,
+        headers: { "content-type": "application/json" },
+      }),
+    ),
+  );
+
+  assert.equal(error.spanish, "El número de teléfono no es válido.");
+  assert.ok(!error.spanish.includes("equipo técnico"));
+});
+
+test("the framework's own 422 never reaches the screen", async () => {
+  // FastAPI answers a malformed query with a LIST of English objects in
+  // `detail`. Letting 422 carry its own text must not let that through: it is
+  // an array, not a sentence, so it falls back to the generic Spanish line.
+  const error = await failingCall(() =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          detail: [
+            { type: "int_parsing", loc: ["query", "limit"], msg: "Input should be a valid integer" },
+          ],
+        }),
+        { status: 422, headers: { "content-type": "application/json" } },
+      ),
+    ),
+  );
+
+  assertSpanish(error.spanish, "framework 422");
+  assert.ok(!error.spanish.includes("Input should be"));
+  assert.ok(!error.spanish.includes("int_parsing"));
+});
