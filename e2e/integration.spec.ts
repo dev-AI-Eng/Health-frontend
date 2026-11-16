@@ -31,23 +31,37 @@ import { requireAdminPassword, signInAsAdmin } from "./auth";
 const API = "http://127.0.0.1:8000";
 
 /**
- * A time no other run has used.
+ * A time no other run has used, and one the clinic actually offers.
  *
  * Fixed times made the suite pass once and fail afterwards with 409: the slot
- * from the previous run was still booked. Minutes are stepped by 20 — the
- * seeded appointment length — so two slots from one run never overlap either.
+ * from the previous run was still booked. Minutes are stepped by 20 -- the
+ * seeded appointment length -- so two slots from one run never overlap either.
+ *
+ * Since booking checks the doctor's hours (QA finding 3), a slot must also be
+ * a time the doctor works: the seeder opens every doctor 08:00-12:00 on
+ * weekdays, so slots stay inside that window, skip weekends, and fall in
+ * February or September, the two months with no Colombian public holiday.
  */
 let slotCounter = 0;
 function freeSlot(): { date: string; time: string } {
-  const minutesFromStart = slotCounter++ * 20;
-  // A Thursday far beyond the seeded data, walked forward per call.
-  const day = 4 + Math.floor(minutesFromStart / (8 * 60));
-  const minuteOfDay = 7 * 60 + (minutesFromStart % (8 * 60));
+  const index = slotCounter++;
+  const perDay = 12; // 08:00 to 11:40 in 20-minute steps
+  const minuteOfDay = 8 * 60 + (index % perDay) * 20;
   const hh = String(Math.floor(minuteOfDay / 60)).padStart(2, "0");
   const mm = String(minuteOfDay % 60).padStart(2, "0");
   // Unique per process, so a re-run does not collide with the previous one.
-  const month = String(((process.pid + slotCounter) % 9) + 1).padStart(2, "0");
-  return { date: `2028-${month}-${String(day).padStart(2, "0")}`, time: `${hh}:${mm}` };
+  const month = process.pid % 2 === 0 ? 1 : 8; // zero-based: February, September
+  let weekdaysToSkip = Math.floor(index / perDay) + (Math.floor(process.pid / 2) % 18);
+  const date = new Date(Date.UTC(2028, month, 1));
+  for (;;) {
+    const weekday = date.getUTCDay();
+    if (weekday !== 0 && weekday !== 6) {
+      if (weekdaysToSkip === 0) break;
+      weekdaysToSkip -= 1;
+    }
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return { date: date.toISOString().slice(0, 10), time: `${hh}:${mm}` };
 }
 
 /**

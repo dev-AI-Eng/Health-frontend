@@ -15,7 +15,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 /** A seeded number that resolves to a patient, as the page pre-fills. */
-const KNOWN = "+573989245874";
+const KNOWN = "+573230832180";
 const UNKNOWN = "+573000000001";
 
 async function sendTurn(page: Page, text: string, phone = KNOWN): Promise<void> {

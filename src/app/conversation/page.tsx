@@ -40,7 +40,12 @@ export default async function ConversationPage() {
 
       <ConversationSimulator
         action={simulateTurn}
-        defaultPhone="+573989245874"
+        // Fernando Ocampo Díaz in the seeded data. The seeder's random
+        // generator has a fixed seed, so every install creates him with this
+        // number, his own binding, WhatsApp consent and an appointment on the
+        // next weekday. The previous number stopped existing when the seeder
+        // was fixed to generate only real Colombian mobile prefixes.
+        defaultPhone="+573230832180"
         labels={{
           phone: t("chat.phone"),
           phoneHint: t("chat.phoneHint"),
