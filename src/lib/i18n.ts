@@ -588,6 +588,14 @@ const COPY = {
     "The patient is resolved from the number, as WhatsApp would. An unregistered number gets a reply that names nobody.",
   ],
   "chat.message": ["Mensaje del paciente", "Patient's message"],
+  "chat.messagePlaceholder": [
+    "Escriba el número del horario (1-5), NINGUNA o CANCELAR",
+    "Type the slot number (1-5), NINGUNA or CANCELAR",
+  ],
+  "chat.messageHint": [
+    "Para elegir una fecha, el paciente responde con el número del horario (1 a 5). NINGUNA pide otras fechas y CANCELAR cancela la cita.",
+    "To choose a date, the patient replies with the slot number (1 to 5). NINGUNA asks for other dates and CANCELAR cancels the appointment.",
+  ],
   "chat.send": ["Enviar", "Send"],
   "chat.sending": ["Procesando…", "Processing…"],
   "chat.patient": ["Paciente", "Patient"],

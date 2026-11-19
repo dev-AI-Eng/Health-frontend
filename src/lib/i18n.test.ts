@@ -62,6 +62,8 @@ function keys(): string[] {
     "reason.clinical_concern",
     "error.title",
     "error.reference",
+    "chat.messagePlaceholder",
+    "chat.messageHint",
   ];
 }
 
@@ -99,6 +101,8 @@ test("the English is not just the Spanish copied across", () => {
     "action.resolve",
     "pending.explainer",
     "error.title",
+    "chat.messagePlaceholder",
+    "chat.messageHint",
   ];
 
   for (const key of mustDiffer) {

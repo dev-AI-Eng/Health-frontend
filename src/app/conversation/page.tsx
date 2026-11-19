@@ -50,6 +50,8 @@ export default async function ConversationPage() {
           phone: t("chat.phone"),
           phoneHint: t("chat.phoneHint"),
           message: t("chat.message"),
+          messagePlaceholder: t("chat.messagePlaceholder"),
+          messageHint: t("chat.messageHint"),
           send: t("chat.send"),
           sending: t("chat.sending"),
           patient: t("chat.patient"),

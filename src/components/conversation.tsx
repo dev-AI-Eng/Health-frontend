@@ -31,6 +31,8 @@ export interface ChatLabels {
   phone: string;
   phoneHint: string;
   message: string;
+  messagePlaceholder: string;
+  messageHint: string;
   send: string;
   sending: string;
   patient: string;
@@ -113,9 +115,11 @@ export function ConversationSimulator({
                 value={text}
                 onChange={(event) => setText(event.target.value)}
                 rows={3}
+                placeholder={labels.messagePlaceholder}
                 disabled={pending}
                 className="border-input bg-background focus-visible:ring-ring min-h-20 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
               />
+              <p className="text-muted-foreground text-xs">{labels.messageHint}</p>
             </div>
 
             <Button type="submit" disabled={pending}>
