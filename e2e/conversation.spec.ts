@@ -46,6 +46,21 @@ test.describe("the conversation simulator", () => {
     await expect(page.getByLabel(/Mensaje del paciente/)).toHaveValue("Quiero otra fecha");
   });
 
+  test("each field's hint is read out with the field, not only shown beside it", async ({
+    page,
+  }) => {
+    await page.goto("/conversation");
+
+    // A hint under a field is invisible to a screen reader unless the field
+    // points at it; the message hint is what tells the tester what to type.
+    await expect(page.getByLabel(/Número del paciente/)).toHaveAccessibleDescription(
+      /se resuelve desde el número/,
+    );
+    await expect(page.getByLabel(/Mensaje del paciente/)).toHaveAccessibleDescription(
+      /NINGUNA pide otras fechas y CANCELAR cancela la cita/,
+    );
+  });
+
   test("a clinical question is never answered, whatever else it says", async ({ page }) => {
     // Rule 5, and the case that matters most: the message also confirms, and
     // the clinical content still outranks it.
@@ -83,7 +98,10 @@ test.describe("the conversation simulator", () => {
   });
 
   test("every draft and the gate's verdict on it is on screen", async ({ page }) => {
-    await sendTurn(page, "No puedo ir, cancelar");
+    // Asking for other dates drafts a reply and changes nothing. "cancelar" did
+    // the same, but it cancelled the seeded patient's appointment, so a second
+    // run on the same database had nothing left to draft a reply for.
+    await sendTurn(page, "Quiero otra fecha");
 
     await expect(page.getByText("Borradores y veredictos")).toBeVisible();
     // Approved or refused, each draft carries a verdict: a draft with no

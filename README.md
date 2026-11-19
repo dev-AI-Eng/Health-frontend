@@ -69,7 +69,7 @@ tool means conversation content leaving the machine, and only synthetic data is
 permitted. It also reuses the clinic scope and auth already present.
 
 ```bash
-npx playwright test e2e/conversation.spec.ts   # 10 tests over the real screen
+npx playwright test e2e/conversation.spec.ts   # 11 tests over the real screen
 ```
 
 ## How it talks to the API

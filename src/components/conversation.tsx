@@ -98,13 +98,16 @@ export function ConversationSimulator({
               <Input
                 id="sender_phone"
                 name="sender_phone"
+                aria-describedby="sender_phone_hint"
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
                 className="font-mono text-sm"
                 disabled={pending}
                 required
               />
-              <p className="text-muted-foreground text-xs">{labels.phoneHint}</p>
+              <p id="sender_phone_hint" className="text-muted-foreground text-xs">
+                {labels.phoneHint}
+              </p>
             </div>
 
             <div className="grid gap-1.5">
@@ -112,6 +115,7 @@ export function ConversationSimulator({
               <textarea
                 id="text"
                 name="text"
+                aria-describedby="text_hint"
                 value={text}
                 onChange={(event) => setText(event.target.value)}
                 rows={3}
@@ -119,7 +123,9 @@ export function ConversationSimulator({
                 disabled={pending}
                 className="border-input bg-background focus-visible:ring-ring min-h-20 w-full rounded-lg border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
               />
-              <p className="text-muted-foreground text-xs">{labels.messageHint}</p>
+              <p id="text_hint" className="text-muted-foreground text-xs">
+                {labels.messageHint}
+              </p>
             </div>
 
             <Button type="submit" disabled={pending}>
